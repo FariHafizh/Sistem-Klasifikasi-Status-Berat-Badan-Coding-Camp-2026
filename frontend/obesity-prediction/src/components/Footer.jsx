@@ -8,17 +8,11 @@ export default function Footer() {
           {/* Brand */}
           <div className="max-w-xs">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <circle cx="9" cy="7" r="3.5" fill="white" />
-                  <path
-                    d="M2 16c0-3.866 3.134-7 7-7s7 3.134 7 7"
-                    stroke="white"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
+              <img
+                src="/favicon.webp"
+                alt="ObesityPredict logo"
+                className="w-8 h-8 object-contain"
+              />
               <span className="font-bold text-primary text-base">
                 ObesityPredict
               </span>
