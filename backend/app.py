@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from db_setup import db, User 
+from db_setup import db, User, PredictionHistory
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
 app = Flask(__name__)
@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://cc_admin:cc123@localhost:5432/capstone_cc'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Kunci rahasia ini digunakan untuk "stempel" tiket agar tidak bisa dipalsukan
+# Kunci rahasia untuk tiap user
 app.config['JWT_SECRET_KEY'] = 'nutricheck-super-rahasia-2026' 
 jwt = JWTManager(app) # Inisialisasi mesin JWT
 
@@ -19,7 +19,7 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-# BAGIAN ROUTE (TARUH DI LUAR / SEJAJAR DENGAN APP)
+# BAGIAN ROUTE LOGIN DAN REGISTER
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -85,3 +85,42 @@ def dashboard_test():
         
 if __name__ == '__main__':
     app.run(debug=True)
+    
+@app.route('/predict', methods=['POST'])
+@jwt_required()
+def predict():
+    
+    current_user_id = get_jwt_identity()
+    
+    # ambil data dari frontend
+    data =  request.get_json()
+    age = data.get('age')
+    heigt = data.get('heigt')
+    weight = data.get('weight')
+    water_intake = data.get('water_intake')
+    
+    # validasi data input
+    if not age or not heigt or not weight or not water_intake:
+        return jsonify({'message': 'Semua data input wajib diisi'}), 400
+    
+    # model ai 
+    
+    # simpan hasil prediksi ke database
+    new_history = PredictionHistory(
+        user_id=current_user_id,
+        age=age,
+        heigt=heigt,
+        weight=weight,
+        water_intake=water_intake,
+        status_kesehatan=status# Ini contoh hasil prediksi, nanti diganti dengan output model AI
+    )
+    
+    db.session.add(new_history)
+    db.session.commit()
+    
+    # kembalikan hasil prediksi ke frontend
+    return jsonify({
+        'message': 'Prediksi berhasil dilakukan',
+        'status_kesehatan': status
+    }), 200
+    
