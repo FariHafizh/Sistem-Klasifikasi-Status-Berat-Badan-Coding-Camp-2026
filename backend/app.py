@@ -67,60 +67,159 @@ def login():
     else:
         return jsonify({'message': 'Email atau password salah'}), 401     
     
-#Endpoint Percobaan JWT
-@app.route('/dashboard-test', methods=['GET'])
-@jwt_required() # Harus ada token untuk masuk.
-def dashboard_test():
-    # Mengambil ID user dari token yang sedang dipakai
-    current_user_id = get_jwt_identity()
-    
-    # Mencari siapa nama user pemilik ID tersebut di database
-    user = User.query.get(current_user_id)
-    
-    return jsonify({
-        'message': f'Akses ditolak untuk umum. Tapi selamat datang, {user.username}!',
-        'user_id': current_user_id,
-        'info': 'Ini adalah data rahasia dari halaman dashboard.'
-    }), 200
-        
-if __name__ == '__main__':
-    app.run(debug=True)
-    
 @app.route('/predict', methods=['POST'])
 @jwt_required()
 def predict():
-    
     current_user_id = get_jwt_identity()
-    
-    # ambil data dari frontend
-    data =  request.get_json()
+    data = request.get_json()
+
+    # Ambil semua data dari frontend
     age = data.get('age')
-    heigt = data.get('heigt')
+    gender_num = data.get('gender_num')
+    height = data.get('height')
     weight = data.get('weight')
-    water_intake = data.get('water_intake')
-    
+    ch2o = data.get('ch2o')
+    favc_num = data.get('favc_num')
+    faf = data.get('faf')
+    scc_num = data.get('scc_num')
+    family_history_num = data.get('family_history_num')
+    caec_num = data.get('caec_num')
+
     # validasi data input
-    if not age or not heigt or not weight or not water_intake:
-        return jsonify({'message': 'Semua data input wajib diisi'}), 400
-    
-    # model ai 
-    
-    # simpan hasil prediksi ke database
+    if None in (age, gender_num, height, weight, ch2o, favc_num, faf, scc_num, family_history_num, caec_num):
+        return jsonify({'message': 'Semua field wajib diisi'}), 400    
+
+    try:
+        height = float(height)
+        weight = float(weight)
+        ch2o = float(ch2o)
+        
+        # Konversi BMI  (Tinggi cm  ke m)
+        height_m = height / 100
+        bmi = weight / (height_m ** 2)
+        
+        # Konversi Water  Intake  per Kg
+        water_intake_per_kg = ch2o / weight
+        
+    except (ValueError, TypeError, ZeroDivisionError):
+        return jsonify({'message': 'Terjadi kesalahan format angka atau pembagian dengan nol'}), 400
+
+    # 9 fitur yang diminta tim ML
+    features_for_model = [
+        bmi, 
+        favc_num, 
+        water_intake_per_kg, 
+        gender_num, 
+        age, 
+        faf, 
+        scc_num, 
+        family_history_num, 
+        caec_num
+    ]
+    # DISINI NANTI PANGGIL MODELNYA
+    # Logika klasifikasi sementara
+    if bmi < 18.5:
+        status = "Underweight"
+    elif 18.5 <= bmi < 24.9:
+        status = "Ideal"
+    elif 25 <= bmi < 29.9:
+        status = "Overweight"
+    else:
+        status = "Obesity"
+
+    # Simpan data mentah ke database
     new_history = PredictionHistory(
         user_id=current_user_id,
         age=age,
-        heigt=heigt,
+        gender_num=gender_num,
+        height=height,
         weight=weight,
-        water_intake=water_intake,
-        status_kesehatan=status# Ini contoh hasil prediksi, nanti diganti dengan output model AI
+        bmi=bmi,
+        favc_num=favc_num,
+        ch2o=ch2o,
+        faf=faf,
+        scc_num=scc_num,
+        family_history_num=family_history_num,
+        caec_num=caec_num,
+        status_kesehatan=status
     )
-    
+
     db.session.add(new_history)
     db.session.commit()
-    
-    # kembalikan hasil prediksi ke frontend
+
+    # Kembalikan respon ke Frontend
     return jsonify({
-        'message': 'Prediksi berhasil dilakukan',
-        'status_kesehatan': status
+        'message': 'Prediksi berhasil dilakukan dan disimpan!',
+        'hasil_prediksi': {
+            'status_kesehatan': status,
+            'bmi': round(bmi, 2)
+        }
+    }), 201
+
+
+# Endpoint history
+@app.route('/history', methods=['GET'])
+@jwt_required()
+def get_history():
+    current_user_id = get_jwt_identity()
+
+    user_histories = PredictionHistory.query.filter_by(user_id=current_user_id).order_by(PredictionHistory.created_at.desc()).all()
+
+    if not user_histories:
+        return jsonify({'message': 'Belum ada riwayat prediksi', 'data': []}), 200
+
+    history_list = []
+    for history in user_histories:
+        history_list.append({
+            'id': history.id,
+            'age': history.age,
+            'gender_num': 'Laki-laki' if history.gender_num == 1 else 'Perempuan',
+            'height': history.height,
+            'weight': history.weight,
+            'favc_num': 'Sering makan tinggi kalori' if history.favc_num == 1 else 'Tidak sering makan tinggi kalori',
+            'ch2o': history.ch2o,
+            'bmi': history.bmi,
+            'faf': history.faf,
+            'scc_num': 'Monitoring konsumsi kalori' if history.scc_num == 1 else 'Tidak monitoring konsumsi kalori',
+            'family_history_num': 'Memiliki riwayat keluarga dengan overweight' if history.family_history_num == 1 else 'Tidak memiliki riwayat keluarga dengan overweight',
+            'caec_num': history.caec_num,
+            'status_kesehatan': history.status_kesehatan,
+            'tanggal': history.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+    return jsonify({
+        'message': 'Berhasil mengambil riwayat prediksi',
+        'data': history_list
     }), 200
+
+#Endpoint untuk dashboard
+@app.route('/dashboard', methods=['GET'])
+@jwt_required()
+def get_dashboard():
+    current_user_id = get_jwt_identity()
+    
+    # .first() mengambil SATU data saja (yang paling atas/terbaru)
+    latest_prediction = PredictionHistory.query.filter_by(user_id=current_user_id).order_by(PredictionHistory.created_at.desc()).first()
+    
+    # Ambil nama user untuk kalimat sapaan
+    user = User.query.get(current_user_id)
+
+    if not latest_prediction:
+        return jsonify({
+            'message': f'Halo {user.username}, Anda belum melakukan tes kesehatan.',
+            'has_data': False
+        }), 200
+
+    return jsonify({
+        'message': f'Selamat datang kembali, {user.username}!',
+        'has_data': True,
+        'data_terbaru': {
+            'weight': latest_prediction.weight,
+            'status_kesehatan': latest_prediction.status_kesehatan,
+            'tanggal_tes_terakhir': latest_prediction.created_at.strftime("%Y-%m-%d")
+        }
+    }), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
     
