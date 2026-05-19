@@ -2,8 +2,12 @@ from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from db_setup import db, User, PredictionHistory
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from google import genai
 
 app = Flask(__name__)
+
+#Konfigurasi API Key untuk Genai
+client = genai.Client(api_key="AIzaSyDqUHVECVjgkbOveWIMmB6hJfvx16UvHkg")
 
 # KONFIGURASI DATABASE
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://cc_admin:cc123@localhost:5432/capstone_cc'
@@ -211,7 +215,7 @@ def get_dashboard():
         }), 200
 
     return jsonify({
-        'message': f'Selamat datang kembali, {user.username}!',
+        'message': f'Selamat datang, {user.username}!',
         'has_data': True,
         'data_terbaru': {
             'weight': latest_prediction.weight,
@@ -219,7 +223,70 @@ def get_dashboard():
             'tanggal_tes_terakhir': latest_prediction.created_at.strftime("%Y-%m-%d")
         }
     }), 200
+    
+@app.route('/recomendation', methods=['GET'])
+@jwt_required()
+def get_recomendation():
+    current_user_id = get_jwt_identity()
 
+    # Ambil riwayat prediksi terbaru pengguna
+    latest_prediction = PredictionHistory.query.filter_by(user_id=current_user_id).order_by(PredictionHistory.created_at.desc()).first()
+
+    # Kalau user ke rekomendasi tapi belum tes
+    if not latest_prediction:
+        return jsonify({'message': 'Tidak ada data prediksi untuk memberikan rekomendasi.'}), 404
+
+    # PROMPT GEMINI MENGGUNAKAN DATA USER
+    prompt = f"""
+    Kamu adalah seorang ahli gizi dan pelatih kebugaran profesional. Tolong berikan rekomendasi kesehatan singkat , praktis, dan ramah untuk pengguna dengan profil medis berikut:
+    - username: {User.query.get(current_user_id).username}
+    - Umur: {latest_prediction.age} tahun
+    - Jenis Kelamin: {'Laki-laki' if latest_prediction.gender_num == 1 else 'Perempuan'}
+    - Tinggi Badan: {latest_prediction.height} cm
+    - Berat Badan: {latest_prediction.weight} kg
+    - BMI: {latest_prediction.bmi}
+    - Water Intake per Kg: {latest_prediction.ch2o / latest_prediction.weight:.2f} gelas/kg
+    - Status Kesehatan: {latest_prediction.status_kesehatan}
+    - Frekuensi Aktivitas Fisik per Minggu: {latest_prediction.faf}
+    - Kebiasaan Makan Tinggi Kalori: {'Sering' if latest_prediction.favc_num == 1 else 'Tidak Sering'}
+    - Monitoring Konsumsi Kalori: {'Ya' if latest_prediction.scc_num == 1 else 'Tidak'}
+    - Riwayat Keluarga dengan Overweight: {'Ya' if latest_prediction.family_history_num == 1 else 'Tidak'}
+    - Kebiasaan Ngemil antara Waktu Makan: {'Ya' if latest_prediction.caec_num == 1 else 'Tidak'}
+    
+    Berikan rekomendasi berupa:
+    1. Pola makan harian yang disarankan (termasuk contoh menu makanan yang sesuai dengan kondisi dan profil pengguna, serta preferensi umum orang Indonesia).
+    2. Aktivitas fisik/olahraga yang aman, cocok, dan sesuai dengan kondisi dan profil pengguna, serta preferensi umum orang Indonesia.
+    3. Anjuran asupan air.
+    
+    Tuliskan jawaban langsung pada poin-poin di atas tanpa basa-basi berlebih dan secara ringkas dengan bahasa yang mudah dipahami. 
+    Jadi ada 3 bagian yaitu makanan harian, aktivitas/olahraga, dan anjuran asupan air. Jangan buat bagian lain selain 3 bagian itu. 
+    Buat singkat dalam bentuk poin,secara rapi, dan hindari menyampaikan ulang informasi yang sudah ada di data profil pengguna, cukup fokus ke rekomendasi praktisnya saja.
+    Karena nanti rekomendasi ini akan dimasukkan ke plan harian pengguna.
+    Jika salah satu dari 3 bagian itu menggunakan suatu metode, gunakan metode terbaru yang paling update dan efektif.
+    
+    Berikan catatan: Rekomendasi ini bersifat umum dan tidak menggantikan konsultasi dengan profesional kesehatan secara langsung. 
+    """
+    try:
+        # Panggil model
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite",
+            contents=prompt,
+            config={"max_output_tokens": 800}
+        )
+        
+        # Ambil teks rekomendasi dari respon
+        rekomendasi_teks = response.text.strip()
+        
+        # Kirimkan ke frontend
+        return jsonify({
+            'message': 'Rekomendasi berhasil dibuat!',
+            'rekomendasi': rekomendasi_teks,
+            'has_data': True
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'message': f'Terjadi kesalahan, coba lagi nanti: {str(e)}'}), 500
+    
 if __name__ == '__main__':
     app.run(debug=True)
     
