@@ -3,8 +3,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from db_setup import db, User, PredictionHistory
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from google import genai
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 #Konfigurasi API Key untuk Genai
 client = genai.Client(api_key="AIzaSyDqUHVECVjgkbOveWIMmB6hJfvx16UvHkg")
@@ -32,9 +34,9 @@ def register():
     password = data.get('password')
 
     if not username or not email or not password:
-        return jsonify({'message': 'Username, email, dan password diperlukan'}), 400
+        return jsonify({'message': 'Username, email, dan password harus diisi'}), 400
 
-    # Hanya cek email, karena username sekarang boleh sama
+    # Cek email apakah udah terdaftar atau belum
     if User.query.filter_by(email=email).first():
         return jsonify({'message': 'Email sudah digunakan'}), 400
 
@@ -224,9 +226,9 @@ def get_dashboard():
         }
     }), 200
     
-@app.route('/recomendation', methods=['GET'])
+@app.route('/recommendation', methods=['GET'])
 @jwt_required()
-def get_recomendation():
+def get_recommendation():
     current_user_id = get_jwt_identity()
 
     # Ambil riwayat prediksi terbaru pengguna
