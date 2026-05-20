@@ -4,6 +4,7 @@ from db_setup import db, User, PredictionHistory
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from google import genai
 from flask_cors import CORS
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 CORS(app)
@@ -20,6 +21,7 @@ app.config['JWT_SECRET_KEY'] = 'nutricheck-super-rahasia-2026'
 jwt = JWTManager(app) # Inisialisasi mesin JWT
 
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # BAGIAN INI HANYA UNTUK BIKIN TABEL
 with app.app_context():
