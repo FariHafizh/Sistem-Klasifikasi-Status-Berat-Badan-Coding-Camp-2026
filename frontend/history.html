@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>History</title>
+    <link rel="stylesheet" href="/app/styles.css" />
+  </head>
+  <body>
+    <header>
+      <strong>History</strong>
+      <nav></nav>
+    </header>
+    <main>
+      <div id="wrap" class="card"></div>
+    </main>
+
+    <script src="/app/app.js"></script>
+    <script>
+      renderNav('history');
+      if (!requireAuth()) {
+        // redirected
+      }
+
+      async function load() {
+        const { res, body } = await apiFetch('/history', { method: 'GET' });
+        const wrap = document.getElementById('wrap');
+
+        if (!res.ok) {
+          wrap.innerHTML = `<div class="error">${body?.message || 'Gagal load history.'}</div>`;
+          return;
+        }
+
+        const data = body.data || [];
+        if (data.length === 0) {
+          wrap.innerHTML = `<p>${body.message}</p><a href="/app/profile">Mulai tes pertama</a>`;
+          return;
+        }
+
+        const rows = data
+          .map(
+            (h) => `
+            <tr>
+              <td>${h.tanggal}</td>
+              <td>${h.status_kesehatan}</td>
+              <td>${h.weight}</td>
+              <td>${Number(h.bmi).toFixed(2)}</td>
+              <td>${h.gender_num}</td>
+              <td>${h.age}</td>
+            </tr>
+          `
+          )
+          .join('');
+
+        wrap.innerHTML = `
+          <p class="small">Riwayat prediksi (terbaru di atas).</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Status</th>
+                <th>Berat (kg)</th>
+                <th>BMI</th>
+                <th>Gender</th>
+                <th>Umur</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      load();
+    </script>
+  </body>
+</html>

@@ -1,4 +1,7 @@
-from flask import Flask, request, jsonify
+import os
+from pathlib import Path
+
+from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
 from db_setup import db, User, PredictionHistory
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -6,28 +9,61 @@ from google import genai
 from flask_cors import CORS
 from flask_migrate import Migrate
 
+from inference import get_inference
+
 app = Flask(__name__)
 CORS(app)
 
-#Konfigurasi API Key untuk Genai
-client = genai.Client(api_key="AIzaSyDqUHVECVjgkbOveWIMmB6hJfvx16UvHkg")
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+# Konfigurasi API Key untuk GenAI (opsional)
+GENAI_API_KEY = os.getenv("GENAI_API_KEY")
+client = genai.Client(api_key=GENAI_API_KEY) if GENAI_API_KEY else None
 
 # KONFIGURASI DATABASE
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://cc_admin:cc123@localhost:5432/capstone_cc'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL',
+    'postgresql://cc_admin:cc123@localhost:5432/capstone_cc'
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Kunci rahasia untuk tiap user
-app.config['JWT_SECRET_KEY'] = 'nutricheck-super-rahasia-2026' 
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'fit-app-rahasia-2026')
 jwt = JWTManager(app) # Inisialisasi mesin JWT
 
 db.init_app(app)
 migrate = Migrate(app, db)
 
-# BAGIAN INI HANYA UNTUK BIKIN TABEL
-with app.app_context():
-    db.create_all()
+# BAGIAN INI HANYA UNTUK BIKIN TABEL (dev/local). Pada deploy, sebaiknya pakai migrate.
+if os.getenv("AUTO_CREATE_TABLES", "1") == "1":
+    with app.app_context():
+        db.create_all()
 
 # BAGIAN ROUTE LOGIN DAN REGISTER
+@app.route('/', methods=['GET'])
+def ui_root():
+    if not FRONTEND_DIR.exists():
+        return jsonify({'message': 'Frontend folder not found.'}), 404
+    return send_from_directory(FRONTEND_DIR, 'index.html')
+
+
+@app.route('/app/', defaults={'requested_path': ''}, methods=['GET'])
+@app.route('/app/<path:requested_path>', methods=['GET'])
+def ui_app(requested_path: str):
+    if not FRONTEND_DIR.exists():
+        return jsonify({'message': 'Frontend folder not found.'}), 404
+
+    requested_path = (requested_path or '').lstrip('/')
+
+    if requested_path == '' or requested_path.endswith('/'):
+        requested_path = (requested_path.rstrip('/') + '/index').lstrip('/')
+
+    if '.' not in Path(requested_path).name:
+        requested_path = f"{requested_path}.html"
+
+    return send_from_directory(FRONTEND_DIR, requested_path)
+
+
 @app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -78,7 +114,7 @@ def login():
 @app.route('/predict', methods=['POST'])
 @jwt_required()
 def predict():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     data = request.get_json()
 
     # Ambil semua data dari frontend
@@ -112,28 +148,27 @@ def predict():
     except (ValueError, TypeError, ZeroDivisionError):
         return jsonify({'message': 'Terjadi kesalahan format angka atau pembagian dengan nol'}), 400
 
-    # 9 fitur yang diminta tim ML
-    features_for_model = [
-        bmi, 
-        favc_num, 
-        water_intake_per_kg, 
-        gender_num, 
-        age, 
-        faf, 
-        scc_num, 
-        family_history_num, 
-        caec_num
-    ]
-    # DISINI NANTI PANGGIL MODELNYA
-    # Logika klasifikasi sementara
-    if bmi < 18.5:
-        status = "Underweight"
-    elif 18.5 <= bmi < 24.9:
-        status = "Ideal"
-    elif 25 <= bmi < 29.9:
-        status = "Overweight"
-    else:
-        status = "Obesity"
+    # Payload fitur sesuai metadata model (lihat Artficial Intelligence/dnn_metadata.json)
+    features_for_model = {
+        "Age": int(age),
+        "BMI": float(bmi),
+        "Water_Intake_Per_Kg": float(water_intake_per_kg),
+        "FAF": float(faf),
+        "Gender_Num": int(gender_num),
+        "family_history_with_overweight_Num": int(family_history_num),
+        "CAEC_Num": int(caec_num),
+        "FAVC_Num": int(favc_num),
+        "SCC_Num": int(scc_num),
+    }
+
+    try:
+        inference = get_inference()
+        model_result = inference.predict(features_for_model)
+        status = model_result.get("prediction", "Unknown")
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 400
+    except Exception as e:
+        return jsonify({'message': f'Gagal memproses model: {str(e)}'}), 500
 
     # Simpan data mentah ke database
     new_history = PredictionHistory(
@@ -160,7 +195,9 @@ def predict():
         'message': 'Prediksi berhasil dilakukan dan disimpan!',
         'hasil_prediksi': {
             'status_kesehatan': status,
-            'bmi': round(bmi, 2)
+            'bmi': round(bmi, 2),
+            'model_used': model_result.get("model_used", "DNN"),
+            'probabilities': model_result.get("probabilities", {})
         }
     }), 201
 
@@ -169,7 +206,7 @@ def predict():
 @app.route('/history', methods=['GET'])
 @jwt_required()
 def get_history():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
 
     user_histories = PredictionHistory.query.filter_by(user_id=current_user_id).order_by(PredictionHistory.created_at.desc()).all()
 
@@ -204,7 +241,7 @@ def get_history():
 @app.route('/dashboard', methods=['GET'])
 @jwt_required()
 def get_dashboard():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     
     # .first() mengambil SATU data saja (yang paling atas/terbaru)
     latest_prediction = PredictionHistory.query.filter_by(user_id=current_user_id).order_by(PredictionHistory.created_at.desc()).first()
@@ -231,7 +268,10 @@ def get_dashboard():
 @app.route('/recommendation', methods=['GET'])
 @jwt_required()
 def get_recommendation():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
+
+    if client is None:
+        return jsonify({'message': 'Fitur rekomendasi belum dikonfigurasi (GENAI_API_KEY belum di-set).'}), 503
 
     # Ambil riwayat prediksi terbaru pengguna
     latest_prediction = PredictionHistory.query.filter_by(user_id=current_user_id).order_by(PredictionHistory.created_at.desc()).first()

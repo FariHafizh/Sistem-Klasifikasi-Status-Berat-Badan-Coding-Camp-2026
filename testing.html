@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistem Klasifikasi - Test</title>
+</head>
+<body>
+
+    <div id="navbar" style="display: none;">
+        <h1>Fit App</h1>
+        <button onclick="goToPage('dashboard')">Dashboard</button>
+        <button onclick="goToPage('predict')">Prediksi</button>
+        <button onclick="goToPage('history')">Riwayat</button>
+        <button onclick="goToPage('recommendation')">Rekomendasi</button>
+        <button onclick="logout()">Logout</button>
+        <hr>
+    </div>
+
+    <div id="auth-page" style="display: block;">
+        <h2>Masuk / Daftar</h2>
+        <p id="auth-alert" style="color: red; font-weight: bold;"></p>
+        
+        Username (Khusus Register): <br>
+        <input type="text" id="username"><br><br>
+        
+        Email: <br>
+        <input type="email" id="email"><br><br>
+        
+        Password: <br>
+        <input type="password" id="password"><br><br>
+        
+        <button onclick="login()">Login</button>
+        <button onclick="register()">Register</button>
+    </div>
+
+    <div id="dashboard-page" style="display: none;">
+        <h2 id="dash-greeting">Memuat Dashboard...</h2>
+        <div id="dash-content"></div>
+    </div>
+
+    <div id="predict-page" style="display: none;">
+        <h2>Isi Data Kesehatan</h2>
+        
+        Umur:<br>
+        <input type="number" id="p-age"><br><br>
+        
+        Jenis Kelamin (1 Laki-laki, 0 Perempuan):<br>
+        <input type="number" id="p-gender"><br><br>
+        
+        Tinggi Badan (cm):<br>
+        <input type="number" id="p-height"><br><br>
+        
+        Berat Badan (kg):<br>
+        <input type="number" id="p-weight"><br><br>
+        
+        Banyak Minum Air (gelas/hari):<br>
+        <input type="number" step="0.1" id="p-ch2o"><br><br>
+        
+        Suka makanan tinggi kalori? (1 Ya, 0 Tidak):<br>
+        <input type="number" id="p-favc"><br><br>
+        
+        Aktivitas Fisik (hari/minggu):<br>
+        <input type="number" step="0.1" id="p-faf"><br><br>
+        
+        Monitor konsumsi kalori? (1 Ya, 0 Tidak):<br>
+        <input type="number" id="p-scc"><br><br>
+        
+        Keluarga riwayat Overweight? (1 Ya, 0 Tidak):<br>
+        <input type="number" id="p-family"><br><br>
+        
+        Sering ngemil? (1 Ya, 0 Tidak):<br>
+        <input type="number" id="p-caec"><br><br>
+        
+        <button onclick="submitPredict()">Simpan Data</button>
+    </div>
+
+    <div id="history-page" style="display: none;">
+        <h2>Riwayat Prediksi</h2>
+        <table border="1" cellpadding="5">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Berat (kg)</th>
+                    <th>BMI</th>
+                    <th>Status Gizi</th>
+                </tr>
+            </thead>
+            <tbody id="history-table-body">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="recommendation-page" style="display: none;">
+        <h2>Rekomendasi Pola Makan & Aktivitas</h2>
+        <button id="btn-rekom" onclick="generateRekomendasi()">Minta Rekomendasi</button>
+        <br><br>
+        <pre id="rekom-content" style="display: none; white-space: pre-wrap; word-wrap: break-word; border: 1px solid black; padding: 10px;"></pre>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:5000';
+        const pages = ['auth', 'dashboard', 'predict', 'history', 'recommendation'];
+
+        function goToPage(pageId) {
+            // Sembunyikan semua halaman
+            pages.forEach(p => document.getElementById(p + '-page').style.display = 'none');
+            // Tampilkan halaman tujuan
+            document.getElementById(pageId + '-page').style.display = 'block';
+
+            if(pageId === 'dashboard') fetchDashboard();
+            if(pageId === 'history') fetchHistory();
+        }
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const token = localStorage.getItem('token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const config = { method, headers };
+            if (body) config.body = JSON.stringify(body);
+
+            const res = await fetch(BASE_URL + endpoint, config);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Terjadi kesalahan server');
+            return data;
+        }
+
+        function showAlert(msg) {
+            const alertBox = document.getElementById('auth-alert');
+            alertBox.textContent = msg;
+            setTimeout(() => alertBox.textContent = '', 3000);
+        }
+
+        async function register() {
+            try {
+                const body = {
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value
+                };
+                await apiCall('/register', 'POST', body);
+                alert('Berhasil register! Silakan login.');
+            } catch (err) { showAlert(err.message); }
+        }
+
+        async function login() {
+            try {
+                const body = {
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value
+                };
+                const res = await apiCall('/login', 'POST', body);
+                localStorage.setItem('token', res.access_token);
+                
+                document.getElementById('navbar').style.display = 'block';
+                goToPage('predict'); // Pindah ke form isi data
+            } catch (err) { showAlert(err.message); }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            document.getElementById('navbar').style.display = 'none';
+            goToPage('auth');
+        }
+
+        async function fetchDashboard() {
+            try {
+                const res = await apiCall('/dashboard');
+                document.getElementById('dash-greeting').textContent = res.message;
+                
+                if (res.has_data) {
+                    document.getElementById('dash-content').innerHTML = `
+                        <p>Status Kesehatan: <b>${res.data_terbaru.status_kesehatan}</b></p>
+                        <p>Berat: ${res.data_terbaru.weight} kg</p>
+                        <p>Tanggal: ${res.data_terbaru.tanggal_tes_terakhir}</p>
+                    `;
+                } else {
+                    document.getElementById('dash-content').innerHTML = `<p>Belum ada data tes kesehatan.</p>`;
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function submitPredict() {
+            try {
+                const body = {
+                    age: document.getElementById('p-age').value,
+                    gender_num: document.getElementById('p-gender').value,
+                    height: document.getElementById('p-height').value,
+                    weight: document.getElementById('p-weight').value,
+                    ch2o: document.getElementById('p-ch2o').value,
+                    favc_num: document.getElementById('p-favc').value,
+                    faf: document.getElementById('p-faf').value,
+                    scc_num: document.getElementById('p-scc').value,
+                    family_history_num: document.getElementById('p-family').value,
+                    caec_num: document.getElementById('p-caec').value
+                };
+                
+                await apiCall('/predict', 'POST', body);
+                alert('Data berhasil dikirim!');
+                goToPage('dashboard');
+                
+            } catch (err) { alert(err.message); }
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await apiCall('/history');
+                const tbody = document.getElementById('history-table-body');
+                tbody.innerHTML = ''; 
+
+                if(res.data && res.data.length > 0) {
+                    res.data.forEach(item => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${item.tanggal}</td>
+                                <td>${item.weight}</td>
+                                <td>${parseFloat(item.bmi).toFixed(2)}</td>
+                                <td>${item.status_kesehatan}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4">Belum ada riwayat</td></tr>';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function generateRekomendasi() {
+            const btn = document.getElementById('btn-rekom');
+            const content = document.getElementById('rekom-content');
+            
+            btn.textContent = 'Sabar yaa...';
+            btn.disabled = true;
+            
+            try {
+                const res = await apiCall('/recommendation');
+                content.style.display = 'block';
+                content.textContent = res.rekomendasi; 
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.textContent = 'Minta Rekomendasi Sekarang';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
