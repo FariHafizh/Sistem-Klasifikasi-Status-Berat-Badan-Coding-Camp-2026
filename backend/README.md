@@ -31,7 +31,7 @@ Model:
 - `MODEL_DIR` (default menunjuk ke `../Artficial Intelligence`)
 - `DNN_MODEL_FILE` (default `model_dnn_obesitas.keras`)
 
-## Jalankan mode ML (paling gampang)
+## Jalankan mode ML 
 Mode ini jalan di Python 3.14, karena tidak perlu TensorFlow.
 
 ```powershell
