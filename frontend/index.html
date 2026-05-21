@@ -1,31 +1,402 @@
 <!doctype html>
 <html lang="id">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Demo Capstone</title>
-    <link rel="stylesheet" href="/app/styles.css" />
-  </head>
-  <body>
-    <header>
-      <strong>Demo Capstone</strong>
-      <nav></nav>
-    </header>
-    <main>
-      <div class="card">
-        <p>Alur demo:</p>
-        <ol>
-          <li>Register / Login</li>
-          <li>Isi data diri (prediksi pertama)</li>
-          <li>Masuk dashboard, lihat history, dan rekomendasi</li>
-          <li>Update progres = isi data lagi</li>
-        </ol>
-        <p class="small">Catatan: Halaman ini hanya UI sederhana untuk demo. Nanti bisa diganti React oleh temanmu.</p>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fit App — Demo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; max-width: 900px; }
+    .card h2 { margin-top: 0; }
+    label { display: block; margin: 10px 0 4px; }
+    input { width: 280px; padding: 8px; }
+    button { padding: 8px 12px; cursor: pointer; }
+    nav { display: none; align-items: center; gap: 10px; margin-bottom: 16px; }
+    nav .spacer { flex: 1; }
+    .muted { color: #666; }
+    .error { color: #b00020; font-weight: 600; }
+    .ok { color: #0a7b34; font-weight: 600; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    pre { white-space: pre-wrap; word-wrap: break-word; }
+  </style>
+</head>
+<body>
+
+  <nav id="navbar">
+    <strong>Fit App</strong>
+    <button type="button" onclick="goToPage('dashboard')">Dashboard</button>
+    <button type="button" onclick="goToPage('recommendation')">Rekomendasi</button>
+    <button type="button" onclick="goToPage('history')">History</button>
+    <span class="spacer"></span>
+    <span id="nav-user" class="muted"></span>
+    <button type="button" onclick="logout()">Logout</button>
+  </nav>
+
+  <!-- AUTH -->
+  <section id="auth-page" class="card">
+    <h2>Masuk / Daftar</h2>
+    <p class="muted">Demo UI sederhana. Setelah login, kamu wajib isi data terlebih dulu sebelum masuk menu utama.</p>
+    <p id="auth-alert" class="error"></p>
+
+    <div class="row">
+      <div>
+        <h3>Register</h3>
+        <label>Username</label>
+        <input type="text" id="reg-username" autocomplete="username" />
+        <label>Email</label>
+        <input type="email" id="reg-email" autocomplete="email" />
+        <label>Password</label>
+        <input type="password" id="reg-password" autocomplete="new-password" />
+        <div style="margin-top: 12px;">
+          <button type="button" onclick="register()">Register</button>
+        </div>
       </div>
-    </main>
-    <script src="/app/app.js"></script>
-    <script>
-      renderNav('home');
-    </script>
-  </body>
+
+      <div>
+        <h3>Login</h3>
+        <label>Email</label>
+        <input type="email" id="login-email" autocomplete="email" />
+        <label>Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" />
+        <div style="margin-top: 12px;">
+          <button type="button" onclick="login()">Login</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WAJIB ISI DATA (FORM PREDIKSI) -->
+  <section id="data-page" class="card" style="display:none;">
+    <h2>Lengkapi Data (Wajib)</h2>
+    <p class="muted">Data ini dipakai untuk prediksi status berat badan, sekaligus membuka akses ke menu utama.</p>
+    <p id="data-alert" class="error"></p>
+
+    <div class="row">
+      <div>
+        <label>Umur</label>
+        <input type="number" id="p-age" />
+        <label>Jenis Kelamin (1 Laki-laki, 0 Perempuan)</label>
+        <input type="number" id="p-gender" />
+        <label>Tinggi Badan (cm)</label>
+        <input type="number" id="p-height" />
+        <label>Berat Badan (kg)</label>
+        <input type="number" id="p-weight" />
+        <label>Banyak Minum Air (gelas/hari)</label>
+        <input type="number" step="0.1" id="p-ch2o" />
+      </div>
+      <div>
+        <label>Suka makanan tinggi kalori? (1 Ya, 0 Tidak)</label>
+        <input type="number" id="p-favc" />
+        <label>Aktivitas Fisik (hari/minggu)</label>
+        <input type="number" step="0.1" id="p-faf" />
+        <label>Monitor konsumsi kalori? (1 Ya, 0 Tidak)</label>
+        <input type="number" id="p-scc" />
+        <label>Keluarga riwayat Overweight? (1 Ya, 0 Tidak)</label>
+        <input type="number" id="p-family" />
+        <label>Sering ngemil? (1 Ya, 0 Tidak)</label>
+        <input type="number" id="p-caec" />
+      </div>
+    </div>
+
+    <div style="margin-top: 12px;">
+      <button type="button" onclick="submitPredict({ unlockNav: true })">Simpan Data</button>
+      <button type="button" onclick="logout()" style="margin-left: 8px;">Batal</button>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard-page" class="card" style="display:none;">
+    <h2 id="dash-greeting">Dashboard</h2>
+    <div id="dash-content"></div>
+    <div style="margin-top: 12px;">
+      <button type="button" onclick="openUpdateProgress()">Update progress</button>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="history-page" class="card" style="display:none;">
+    <h2>History</h2>
+    <p class="muted">Riwayat prediksi akan bertambah setiap kamu update progress.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Tanggal</th>
+          <th>Berat (kg)</th>
+          <th>BMI</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="history-table-body"></tbody>
+    </table>
+  </section>
+
+  <!-- RECOMMENDATION -->
+  <section id="recommendation-page" class="card" style="display:none;">
+    <h2>Rekomendasi</h2>
+    <p class="muted">Rekomendasi akan dibuat berdasarkan data tes terbaru.</p>
+    <p id="rekom-alert" class="error"></p>
+    <button id="btn-rekom" type="button" onclick="generateRekomendasi()">Minta Rekomendasi</button>
+    <div style="margin-top: 12px;">
+      <pre id="rekom-content" style="display:none; border: 1px solid #ddd; border-radius: 8px; padding: 12px;"></pre>
+    </div>
+  </section>
+
+  <script>
+    const pages = ['auth', 'data', 'dashboard', 'history', 'recommendation'];
+
+    function showPage(pageId) {
+      pages.forEach(p => {
+        const el = document.getElementById(p + '-page');
+        if (el) el.style.display = 'none';
+      });
+      const target = document.getElementById(pageId + '-page');
+      if (target) target.style.display = 'block';
+    }
+
+    function setNavbarVisible(visible) {
+      document.getElementById('navbar').style.display = visible ? 'flex' : 'none';
+    }
+
+    function setNavUser(username) {
+      const el = document.getElementById('nav-user');
+      el.textContent = username ? `Login sebagai: ${username}` : '';
+    }
+
+    function setError(id, msg) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg || '';
+    }
+
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const config = { method, headers };
+      if (body) config.body = JSON.stringify(body);
+
+      const res = await fetch(endpoint, config);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = data.message || `HTTP ${res.status}`;
+        const err = new Error(message);
+        err.status = res.status;
+        throw err;
+      }
+      return data;
+    }
+
+    async function register() {
+      setError('auth-alert', '');
+      try {
+        const body = {
+          username: document.getElementById('reg-username').value,
+          email: document.getElementById('reg-email').value,
+          password: document.getElementById('reg-password').value,
+        };
+        await apiCall('/register', 'POST', body);
+        alert('Berhasil register! Silakan login.');
+      } catch (err) {
+        setError('auth-alert', err.message);
+      }
+    }
+
+    async function login() {
+      setError('auth-alert', '');
+      try {
+        const body = {
+          email: document.getElementById('login-email').value,
+          password: document.getElementById('login-password').value,
+        };
+        const res = await apiCall('/login', 'POST', body);
+        localStorage.setItem('token', res.access_token);
+        localStorage.setItem('username', res.username || '');
+        setNavUser(res.username || '');
+
+        await postLoginGate();
+      } catch (err) {
+        setError('auth-alert', err.message);
+      }
+    }
+
+    async function postLoginGate() {
+      // Wajib isi data terlebih dulu sebelum navbar tampil
+      setNavbarVisible(false);
+      try {
+        const dash = await apiCall('/dashboard');
+        if (dash.has_data) {
+          setNavbarVisible(true);
+          showPage('dashboard');
+          renderDashboard(dash);
+        } else {
+          showPage('data');
+        }
+      } catch (err) {
+        // Jika token invalid, balik ke auth
+        logout();
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      setNavUser('');
+      setNavbarVisible(false);
+      showPage('auth');
+    }
+
+    async function goToPage(pageId) {
+      if (!localStorage.getItem('token')) {
+        logout();
+        return;
+      }
+
+      if (pageId === 'dashboard') {
+        const dash = await apiCall('/dashboard');
+        showPage('dashboard');
+        renderDashboard(dash);
+        return;
+      }
+
+      if (pageId === 'history') {
+        showPage('history');
+        await fetchHistory();
+        return;
+      }
+
+      if (pageId === 'recommendation') {
+        showPage('recommendation');
+        await loadRecommendationCache();
+        return;
+      }
+
+      if (pageId === 'data') {
+        showPage('data');
+        return;
+      }
+    }
+
+    function renderDashboard(res) {
+      document.getElementById('dash-greeting').textContent = res.message || 'Dashboard';
+      const content = document.getElementById('dash-content');
+      if (!res.has_data) {
+        content.innerHTML = '<p class="muted">Belum ada data tes kesehatan.</p>';
+        return;
+      }
+      content.innerHTML = `
+        <p>Status: <strong>${res.data_terbaru.status_kesehatan}</strong></p>
+        <p>Berat: ${res.data_terbaru.weight} kg</p>
+        <p>BMI: ${typeof res.data_terbaru.bmi === 'number' ? res.data_terbaru.bmi.toFixed(2) : res.data_terbaru.bmi}</p>
+        <p>Tes terakhir: ${res.data_terbaru.tanggal_tes_terakhir}</p>
+      `;
+    }
+
+    function openUpdateProgress() {
+      setError('data-alert', '');
+      showPage('data');
+      // Navbar tetap tampil karena user sudah pernah isi data
+      setNavbarVisible(true);
+    }
+
+    async function submitPredict({ unlockNav }) {
+      setError('data-alert', '');
+      try {
+        const body = {
+          age: document.getElementById('p-age').value,
+          gender_num: document.getElementById('p-gender').value,
+          height: document.getElementById('p-height').value,
+          weight: document.getElementById('p-weight').value,
+          ch2o: document.getElementById('p-ch2o').value,
+          favc_num: document.getElementById('p-favc').value,
+          faf: document.getElementById('p-faf').value,
+          scc_num: document.getElementById('p-scc').value,
+          family_history_num: document.getElementById('p-family').value,
+          caec_num: document.getElementById('p-caec').value,
+        };
+
+        await apiCall('/predict', 'POST', body);
+
+        if (unlockNav) setNavbarVisible(true);
+        await goToPage('dashboard');
+      } catch (err) {
+        setError('data-alert', err.message);
+      }
+    }
+
+    async function fetchHistory() {
+      const res = await apiCall('/history');
+      const tbody = document.getElementById('history-table-body');
+      tbody.innerHTML = '';
+
+      if (res.data && res.data.length > 0) {
+        res.data.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.tanggal}</td>
+            <td>${item.weight}</td>
+            <td>${parseFloat(item.bmi).toFixed(2)}</td>
+            <td>${item.status_kesehatan}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="4" class="muted">Belum ada riwayat</td>';
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function generateRekomendasi() {
+      setError('rekom-alert', '');
+      const btn = document.getElementById('btn-rekom');
+      const content = document.getElementById('rekom-content');
+
+      btn.textContent = 'Memproses...';
+      btn.disabled = true;
+
+      try {
+        const res = await apiCall('/recommendation');
+        content.style.display = 'block';
+        content.textContent = res.rekomendasi || '(kosong)';
+      } catch (err) {
+        setError('rekom-alert', err.message);
+      } finally {
+        btn.textContent = 'Minta Rekomendasi';
+        btn.disabled = false;
+      }
+    }
+
+    async function loadRecommendationCache() {
+      setError('rekom-alert', '');
+      const content = document.getElementById('rekom-content');
+      try {
+        const res = await apiCall('/recommendation?cache_only=1');
+        if (res && res.rekomendasi) {
+          content.style.display = 'block';
+          content.textContent = res.rekomendasi;
+        } else {
+          content.style.display = 'none';
+          content.textContent = '';
+        }
+      } catch (err) {
+        setError('rekom-alert', err.message);
+      }
+    }
+
+    // Initial
+    (function init() {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username') || '';
+      setNavUser(username);
+      if (token) {
+        postLoginGate();
+      } else {
+        logout();
+      }
+    })();
+  </script>
+</body>
 </html>

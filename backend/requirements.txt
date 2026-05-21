@@ -5,6 +5,9 @@ Flask-Migrate==4.1.0
 Flask-SQLAlchemy==3.1.1
 psycopg2-binary==2.9.12
 
+# Local dev convenience (.env)
+python-dotenv==1.1.1
+
 # GenAI (optional, for /recommendation)
 google-genai==2.4.0
 

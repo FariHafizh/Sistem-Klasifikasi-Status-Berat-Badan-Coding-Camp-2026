@@ -1,9 +1,18 @@
 import os
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv  # type: ignore
+
+    # Load backend/.env if present (dev convenience)
+    load_dotenv()
+except Exception:
+    # python-dotenv is optional; env vars can still be provided by the shell.
+    pass
+
 from flask import Flask, request, jsonify, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
-from db_setup import db, User, PredictionHistory
+from db_setup import db, User, PredictionHistory, Recommendation
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from google import genai
 from flask_cors import CORS
@@ -148,7 +157,7 @@ def predict():
     except (ValueError, TypeError, ZeroDivisionError):
         return jsonify({'message': 'Terjadi kesalahan format angka atau pembagian dengan nol'}), 400
 
-    # Payload fitur sesuai metadata model (lihat Artficial Intelligence/dnn_metadata.json)
+    # Payload fitur sesuai metadata model (Artficial Intelligence/dnn_metadata.json)
     features_for_model = {
         "Age": int(age),
         "BMI": float(bmi),
@@ -260,6 +269,7 @@ def get_dashboard():
         'has_data': True,
         'data_terbaru': {
             'weight': latest_prediction.weight,
+            'bmi': round(float(latest_prediction.bmi), 2),
             'status_kesehatan': latest_prediction.status_kesehatan,
             'tanggal_tes_terakhir': latest_prediction.created_at.strftime("%Y-%m-%d")
         }
@@ -270,6 +280,8 @@ def get_dashboard():
 def get_recommendation():
     current_user_id = int(get_jwt_identity())
 
+    cache_only = (request.args.get('cache_only') or '').strip().lower() in ('1', 'true', 'yes')
+
     if client is None:
         return jsonify({'message': 'Fitur rekomendasi belum dikonfigurasi (GENAI_API_KEY belum di-set).'}), 503
 
@@ -279,6 +291,24 @@ def get_recommendation():
     # Kalau user ke rekomendasi tapi belum tes
     if not latest_prediction:
         return jsonify({'message': 'Tidak ada data prediksi untuk memberikan rekomendasi.'}), 404
+
+    # Jika rekomendasi untuk prediksi terbaru sudah ada, pakai cache DB.
+    existing = Recommendation.query.filter_by(prediction_history_id=latest_prediction.id).first()
+    if existing:
+        return jsonify({
+            'message': 'Rekomendasi berhasil diambil (cache).',
+            'rekomendasi': existing.content_text,
+            'has_data': True,
+            'cached': True,
+        }), 200
+
+    if cache_only:
+        return jsonify({
+            'message': 'Belum ada rekomendasi tersimpan. Klik "Minta Rekomendasi" untuk membuatnya.',
+            'has_data': True,
+            'cached': False,
+            'rekomendasi': None,
+        }), 200
 
     # PROMPT GEMINI MENGGUNAKAN DATA USER
     prompt = f"""
@@ -320,12 +350,22 @@ def get_recommendation():
         
         # Ambil teks rekomendasi dari respon
         rekomendasi_teks = response.text.strip()
+
+        rec = Recommendation(
+            user_id=current_user_id,
+            prediction_history_id=latest_prediction.id,
+            content_text=rekomendasi_teks,
+            gen_model="gemini-3.1-flash-lite",
+        )
+        db.session.add(rec)
+        db.session.commit()
         
         # Kirimkan ke frontend
         return jsonify({
             'message': 'Rekomendasi berhasil dibuat!',
             'rekomendasi': rekomendasi_teks,
-            'has_data': True
+            'has_data': True,
+            'cached': False
         }), 200
         
     except Exception as e:

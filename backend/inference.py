@@ -165,8 +165,11 @@ def get_inference() -> ObesityInference:
     here = os.path.dirname(os.path.abspath(__file__))
     default_model_dir = os.path.normpath(os.path.join(here, "..", "Artficial Intelligence"))
 
-    model_dir = os.environ.get("MODEL_DIR", default_model_dir)
-    dnn_model_file = os.environ.get("DNN_MODEL_FILE", "model_dnn_obesitas.keras")
+    model_dir_env = os.environ.get("MODEL_DIR")
+    model_dir = (model_dir_env or "").strip() or default_model_dir
+
+    dnn_model_file_env = os.environ.get("DNN_MODEL_FILE")
+    dnn_model_file = (dnn_model_file_env or "").strip() or "model_dnn_obesitas.keras"
 
     model_type = os.environ.get("MODEL_TYPE", "").strip().lower()
     if not model_type:

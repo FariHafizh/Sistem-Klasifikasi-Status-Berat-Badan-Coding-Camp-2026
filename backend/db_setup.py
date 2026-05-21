@@ -10,6 +10,7 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     histories= db.relationship('PredictionHistory', backref='owner', lazy=True)
+    recommendations = db.relationship('Recommendation', backref='owner', lazy=True)
     
 # Tabel baru buat nampung data dari prediksi
 class PredictionHistory(db.Model):
@@ -33,4 +34,19 @@ class PredictionHistory(db.Model):
     status_kesehatan = db.Column(db.String(50), nullable=False)
     
     #catat waktu
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Recommendation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    prediction_history_id = db.Column(
+        db.Integer,
+        db.ForeignKey('prediction_history.id'),
+        nullable=False,
+        unique=True,
+    )
+
+    content_text = db.Column(db.Text, nullable=False)
+    gen_model = db.Column(db.String(80), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

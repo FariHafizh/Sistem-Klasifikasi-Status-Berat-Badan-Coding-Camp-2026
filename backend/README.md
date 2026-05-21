@@ -16,6 +16,9 @@ Backend ini menangani:
 ## Environment Variables
 Lihat contoh di `.env.example`.
 
+Untuk dev/demo, kamu bisa copy file contoh menjadi `.env` di folder `backend/`.
+Backend akan otomatis membaca `.env` saat startup (via `python-dotenv`) jika package terpasang.
+
 Minimal untuk jalan:
 - `DATABASE_URL`
 - `JWT_SECRET_KEY`
