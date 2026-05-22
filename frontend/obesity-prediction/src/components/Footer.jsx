@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -27,50 +28,19 @@ export default function Footer() {
                 aria-label="Instagram"
                 className="hover:opacity-70 transition-opacity"
               >
-                <img src="/instagram.svg" alt="Instagram" className="w-5 h-5" />
+                <img src="instagram.svg" alt="Instagram" className="w-5 h-5" />
               </a>
               <a
                 href="#"
                 aria-label="GitHub"
                 className="hover:opacity-70 transition-opacity"
               >
-                <img src="/github.svg" alt="GitHub" className="w-5 h-5" />
+                <img src="github.svg" alt="GitHub" className="w-5 h-5" />
               </a>
             </div>
           </div>
 
           {/* Nav Links */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-              Navigation
-            </p>
-            <ul className="space-y-2 text-sm text-gray-500">
-              <li>
-                <a
-                  href="#fitur"
-                  className="hover:text-primary transition-colors"
-                >
-                  Fitur
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#cara-kerja"
-                  className="hover:text-primary transition-colors"
-                >
-                  Cara Kerja
-                </a>
-              </li>
-              <li>
-                <Link
-                  to="/input"
-                  className="hover:text-primary transition-colors"
-                >
-                  Mulai Prediksi
-                </Link>
-              </li>
-            </ul>
-          </div>
         </div>
 
         <div className="mt-8 pt-6 border-t border-blue-50 text-xs text-center text-gray-400">

@@ -1,0 +1,29 @@
+{
+  "model_name": "DNN_Obesitas",
+  "input_features": [
+    "Age",
+    "BMI",
+    "Water_Intake_Per_Kg",
+    "FAF",
+    "Gender_Num",
+    "family_history_with_overweight_Num",
+    "CAEC_Num",
+    "FAVC_Num",
+    "SCC_Num"
+  ],
+  "num_classes": 4,
+  "label_map": {
+    "0": "Underweight",
+    "1": "Normal",
+    "2": "Overweight",
+    "3": "Obese"
+  },
+  "cols_to_scale": [
+    "Age",
+    "BMI",
+    "Water_Intake_Per_Kg"
+  ],
+  "best_val_acc": 0.9522,
+  "best_ml_cv": 0.994,
+  "api_model_type": "ml"
+}
