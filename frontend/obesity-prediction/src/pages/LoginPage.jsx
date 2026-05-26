@@ -10,7 +10,7 @@ import { loginUser } from '../services/api';
 // DEV_MODE = true, bypass backend, langsung masuk tanpa API
 // DEV_MODE = false, kalo udh diintegrasi ke backend
 // ─────────────────────────────────────────────────────────────
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 function IconInput({
   id,
@@ -83,7 +83,7 @@ export default function LoginPage() {
       return;
     }
 
-    // ── PRODUCTION MODE ──
+    // PRODUCTION MODE
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);

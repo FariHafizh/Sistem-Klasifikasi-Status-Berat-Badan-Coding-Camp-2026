@@ -5,7 +5,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui';
 import { getRecommendation } from '../services/api';
 
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 const MOCK_REKOMENDASI = `1. Pola Makan Harian yang Disarankan
 - Sarapan: Oatmeal + buah + telur rebus
@@ -28,7 +28,7 @@ const MOCK_REKOMENDASI = `1. Pola Makan Harian yang Disarankan
 
 Catatan: Rekomendasi ini bersifat umum dan tidak menggantikan konsultasi dengan profesional kesehatan secara langsung.`;
 
-// ── Parse teks Gemini jadi 3 section ──────────────────────────
+// Parse teks Gemini jadi 3 section
 const parseRekomendasi = (text) => {
   if (!text) return { makan: '', olahraga: '', air: '', catatan: '' };
   const lines = text.split('\n');
@@ -142,7 +142,7 @@ export default function RecommendationPage() {
           <Button onClick={() => navigate('/input')}>Mulai Prediksi</Button>
         </div>
       ) : !rekomendasi ? (
-        /* Belum ada rekomendasi — tampilkan tombol generate */
+        /* Belum ada rekomendasi, tampilin tombol generate */
         <div className="bg-white rounded-2xl p-10 text-center shadow-sm border border-blue-100">
           <Sparkles size={40} className="mx-auto text-[#2d3a8c] mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">
@@ -224,7 +224,9 @@ export default function RecommendationPage() {
                       <p className="text-sm font-semibold text-gray-800">
                         {item.label}
                       </p>
-                      <p className="text-xs text-gray-500">{item.sub}</p>
+                      <p className="text-sm text-gray-500 leading-relaxed">
+                        {item.sub}
+                      </p>
                     </div>
                     <span className="text-lg">{item.icon}</span>
                   </div>
@@ -232,7 +234,7 @@ export default function RecommendationPage() {
               </div>
             </div>
 
-            {/* ── Kolom kanan: Rekomendasi AI ── */}
+            {/* Kolom kanan: Rekomendasi AI */}
             <div className="flex-1 flex flex-col gap-6">
               {/* Pola Makan */}
               <div>
@@ -259,7 +261,7 @@ export default function RecommendationPage() {
                         <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mb-3 text-lg">
                           {gi === 0 ? '🥗' : '🌿'}
                         </div>
-                        <h4 className="font-bold text-gray-800 text-sm mb-2">
+                        <h4 className="font-bold text-gray-800 text-base mb-3">
                           {gi === 0
                             ? 'Defisit Kalori Terukur'
                             : 'Diet Tinggi Serat & Kalori'}
@@ -268,7 +270,7 @@ export default function RecommendationPage() {
                           {group.map((line, li) => (
                             <li
                               key={li}
-                              className="text-xs text-gray-600 leading-relaxed"
+                              className="text-sm text-gray-600 leading-7"
                             >
                               • {line}
                             </li>
@@ -289,11 +291,11 @@ export default function RecommendationPage() {
                 </div>
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100 flex gap-6">
                   <div className="shrink-0 bg-[#f0f4ff] rounded-xl p-4 text-center min-w-30">
-                    <p className="text-xs text-gray-500 mb-1">Target Harian</p>
+                    <p className="text-sm text-gray-500 mb-1">Target Harian</p>
                     <p className="text-3xl font-extrabold text-[#2d3a8c]">
                       10.000
                     </p>
-                    <p className="text-xs font-semibold text-gray-500 tracking-widest">
+                    <p className="text-sm font-semibold text-gray-500 tracking-widest">
                       LANGKAH
                     </p>
                   </div>
@@ -304,7 +306,7 @@ export default function RecommendationPage() {
                       .map((line, i) => (
                         <li
                           key={i}
-                          className="flex gap-2 text-sm text-gray-700"
+                          className="flex gap-3 text-base text-gray-700 leading-7"
                         >
                           <span className="w-2 h-2 rounded-full bg-[#2d3a8c] shrink-0 mt-1.5" />
                           <span>{line}</span>
@@ -316,7 +318,7 @@ export default function RecommendationPage() {
 
               {/* Catatan */}
               {parsed.catatan && (
-                <p className="text-xs text-gray-400 italic px-1">
+                <p className="text-sm text-gray-400 italic px-1 leading-relaxed">
                   {parsed.catatan}
                 </p>
               )}

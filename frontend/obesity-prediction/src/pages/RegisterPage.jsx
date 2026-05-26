@@ -10,7 +10,7 @@ import { registerUser } from '../services/api';
 // DEV_MODE = true. bypass backend, langsung ke /login
 // DEV_MODE = false. kalo udh integrasi ke backend
 // ─────────────────────────────────────────────────────────────
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 function IconInput({
   id,
@@ -76,13 +76,13 @@ export default function RegisterPage() {
   };
 
   const handleSubmit = async () => {
-    // ── DEV MODE: skip validasi & API ──
+    // DEV MODE: skip validasi & API
     if (DEV_MODE) {
       navigate('/login', { state: { registered: true } });
       return;
     }
 
-    // ── PRODUCTION MODE ──
+    // PRODUCTION MODE
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);

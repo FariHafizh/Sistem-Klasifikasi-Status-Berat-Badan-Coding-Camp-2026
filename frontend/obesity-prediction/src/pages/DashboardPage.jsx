@@ -10,17 +10,18 @@ import {
   Minus,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
-import { Button, InputField, SelectField, Modal } from '../components/ui';
-import { getDashboard, predictObesity } from '../services/api';
+import { Button } from '../components/ui';
+import { getDashboard } from '../services/api';
 
-const DEV_MODE = true;
+const DEV_MODE = false; // Set true untuk menggunakan data mock
 
 const MOCK_DASHBOARD = {
   has_data: true,
   data_terbaru: {
     weight: 72,
     bmi: 26.4,
-    status_kesehatan: 'Overweight',
+    status_kesehatan: 'Overweight_Level_I',
+    confidence_score: 0.91,
     tanggal_tes_terakhir: '2026-03-12',
     age: 25,
     gender_num: 1,
@@ -34,16 +35,22 @@ const MOCK_DASHBOARD = {
 
 // 4 kategori hasil prediksi
 const STATUS_STYLE = {
-  Underweight: {
+  Insufficient_Weight: {
     badge: 'bg-blue-100 text-blue-700',
     label: 'Underweight',
   },
-  Normal: { badge: 'bg-green-100 text-green-700', label: 'Normal' },
-  Overweight: {
+  Normal_Weight: { badge: 'bg-green-100 text-green-700', label: 'Normal' },
+  Overweight_Level_I: {
     badge: 'bg-yellow-100 text-yellow-700',
     label: 'Overweight',
   },
-  Obesity: { badge: 'bg-red-100 text-red-600', label: 'Obesitas' },
+  Overweight_Level_II: {
+    badge: 'bg-yellow-100 text-yellow-700',
+    label: 'Overweight',
+  },
+  Obesity_Type_I: { badge: 'bg-red-100 text-red-600', label: 'Obesitas' },
+  Obesity_Type_II: { badge: 'bg-red-100 text-red-600', label: 'Obesitas' },
+  Obesity_Type_III: { badge: 'bg-red-100 text-red-600', label: 'Obesitas' },
 };
 const getStatus = (key) =>
   STATUS_STYLE[key] ?? {
@@ -67,33 +74,14 @@ const calcDaysLeft = (tanggal) => {
   return Math.max(0, Math.ceil((next - new Date()) / (1000 * 60 * 60 * 24)));
 };
 
-const EXERCISE_OPTIONS = [
-  { value: '0', label: 'Tidak Pernah' },
-  { value: '1-2', label: '1–2 Hari' },
-  { value: '3-4', label: '3–4 Hari' },
-  { value: '4+', label: 'Lebih dari 4 Hari' },
-];
-const SNACKING_OPTIONS = [
-  { value: 'never', label: 'Tidak Pernah' },
-  { value: 'sometimes', label: 'Kadang-Kadang' },
-  { value: 'frequent', label: 'Sering' },
-  { value: 'always', label: 'Selalu' },
-];
-
 export default function DashboardPage() {
   const navigate = useNavigate();
   const username = localStorage.getItem('username') || 'Pengguna';
 
   const [data, setData] = useState(null);
-  const [prevWeight, setPrevWeight] = useState(null); // berat sebelum update
+  // eslint-disable-next-line no-unused-vars
+  const [prevWeight, setPrevWeight] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [progress, setProgress] = useState({
-    weight: '',
-    exercise_freq: '',
-    snacking: '',
-  });
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -118,44 +106,6 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, [navigate]);
 
-  const handleSaveProgress = async () => {
-    if (!progress.weight) return;
-    setSaving(true);
-    const newWeight = parseFloat(progress.weight);
-    try {
-      if (!DEV_MODE) {
-        const last = data?.data_terbaru;
-        await predictObesity({
-          age: last?.age ?? 25,
-          gender: last?.gender_num === 1 ? 'male' : 'female',
-          height: (last?.height ?? 165) / 100,
-          weight: progress.weight,
-          water_intake: last?.ch2o ?? 2,
-          snacking: progress.snacking || 'sometimes',
-          family_history: last?.family_history_num === 1 ? 'yes' : 'no',
-          exercise_freq: progress.exercise_freq || '1-2',
-          monitor_calories: last?.scc_num === 1 ? 'yes' : 'no',
-          high_calorie: last?.favc_num === 1 ? 'yes' : 'no',
-        });
-        const { data: fresh } = await getDashboard();
-        setPrevWeight(data?.data_terbaru?.weight ?? null);
-        setData(fresh);
-      } else {
-        setPrevWeight(data?.data_terbaru?.weight ?? null);
-        setData((prev) => ({
-          ...prev,
-          data_terbaru: { ...prev.data_terbaru, weight: newWeight },
-        }));
-      }
-      setModalOpen(false);
-      setProgress({ weight: '', exercise_freq: '', snacking: '' });
-    } catch (err) {
-      console.error('Gagal update progress:', err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const bmi = data?.data_terbaru?.bmi;
   const status = data?.data_terbaru?.status_kesehatan;
   const weight = data?.data_terbaru?.weight;
@@ -173,7 +123,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      {/* Header — nama */}
+      {/* Header — nama dari localStorage */}
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold text-gray-800">
           Selamat Datang, {username}!
@@ -227,11 +177,21 @@ export default function DashboardPage() {
               <p className="text-3xl font-bold text-gray-800 mb-2">
                 {statusStyle.label}
               </p>
+
               <span
                 className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusStyle.badge}`}
               >
                 {statusStyle.label}
               </span>
+
+              <p className="text-sm text-gray-500 mt-3">
+                Confidence Score:{' '}
+                <span className="font-semibold text-gray-700">
+                  {data?.data_terbaru?.confidence_score
+                    ? `${(data.data_terbaru.confidence_score * 100).toFixed(1)}%`
+                    : '-'}
+                </span>
+              </p>
             </div>
 
             {/* Berat Card — dengan indikator naik/turun */}
@@ -272,7 +232,7 @@ export default function DashboardPage() {
                 </div>
               )}
               {weightDiff === null && (
-                <p className="text-xs text-gray-400">
+                <p className="text-sm text-gray-400">
                   Update progress untuk melihat perubahan
                 </p>
               )}
@@ -285,7 +245,11 @@ export default function DashboardPage() {
               Tambahkan Progress Bulanan Anda
             </h2>
             <button
-              onClick={() => (canUpdate || DEV_MODE) && setModalOpen(true)}
+              onClick={() => {
+                if (canUpdate || DEV_MODE) {
+                  navigate('/input', { state: { isProgress: true } });
+                }
+              }}
               className={`
                 inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-base transition-all duration-200
                 ${
@@ -306,58 +270,6 @@ export default function DashboardPage() {
           </div>
         </>
       )}
-
-      {/* ── Modal ── */}
-      <Modal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Update Progress Kesehatan"
-        subtitle="Masukkan data terbaru Anda untuk mendapatkan analisis AI yang akurat."
-      >
-        <div className="flex flex-col gap-5">
-          <InputField
-            label="Berat Badan Sekarang (kg)"
-            id="prog_weight"
-            type="number"
-            placeholder="Contoh: 70"
-            value={progress.weight}
-            onChange={(e) =>
-              setProgress((p) => ({ ...p, weight: e.target.value }))
-            }
-            required
-          />
-          <SelectField
-            label="Frekuensi Olahraga"
-            id="prog_exercise"
-            options={EXERCISE_OPTIONS}
-            value={progress.exercise_freq}
-            onChange={(e) =>
-              setProgress((p) => ({ ...p, exercise_freq: e.target.value }))
-            }
-          />
-          <SelectField
-            label="Perubahan Kebiasaan Ngemil"
-            id="prog_snacking"
-            options={SNACKING_OPTIONS}
-            value={progress.snacking}
-            onChange={(e) =>
-              setProgress((p) => ({ ...p, snacking: e.target.value }))
-            }
-          />
-          <div className="flex gap-3 mt-2">
-            <Button
-              variant="outline"
-              fullWidth
-              onClick={() => setModalOpen(false)}
-            >
-              Batal
-            </Button>
-            <Button fullWidth onClick={handleSaveProgress} disabled={saving}>
-              {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 }

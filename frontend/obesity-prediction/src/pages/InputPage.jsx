@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button, InputField, SelectField, RadioGroup } from '../components/ui';
 import { predictObesity } from '../services/api';
+
+// ─────────────────────────────────────────────────────────────
+// DEV_MODE = true  → bypass API, langsung ke dashboard
+// DEV_MODE = false → hit backend
+// ─────────────────────────────────────────────────────────────
+const DEV_MODE = false;
 
 // ── Options ────────────────────────────────────────────────────
 const GENDER_OPTIONS = [
@@ -47,13 +53,18 @@ const INITIAL = {
 
 export default function InputPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Kalau dipanggil dari Dashboard tombol Update Progress, ada state isProgress: true
+  const isProgress = location.state?.isProgress === true;
+
   const [form, setForm] = useState(INITIAL);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Redirect ke login kalau belum punya token
+  // Redirect ke login kalau belum punya token (skip di DEV_MODE)
   useEffect(() => {
-    if (!localStorage.getItem('token')) navigate('/login');
+    if (!DEV_MODE && !localStorage.getItem('token')) navigate('/login');
   }, [navigate]);
 
   // ── Handlers ────────────────────────────────────────────────
@@ -88,8 +99,8 @@ export default function InputPage() {
       errs.height = 'Tinggi badan wajib diisi';
     } else if (isNaN(form.height)) {
       errs.height = 'Tinggi badan harus berupa angka';
-    } else if (Number(form.height) < 0 || Number(form.height) > 250) {
-      errs.height = 'Tinggi badan harus antara 0–250 cm';
+    } else if (Number(form.height) < 50 || Number(form.height) > 250) {
+      errs.height = 'Tinggi badan harus antara 50–250 cm';
     }
 
     // Berat Badan
@@ -123,61 +134,30 @@ export default function InputPage() {
     return errs;
   };
 
-  const DEV_MODE = true;
-
   const handleSubmit = async () => {
     const errs = validate();
-
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-
       const firstErrField = Object.keys(errs)[0];
       document
         .getElementById(firstErrField)
         ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
       return;
     }
 
-    // ── DEV MODE ─────────────────────────────
-    if (DEV_MODE) {
-      const heightInMeter = Number(form.height) / 100;
-
-      const bmi = Number(form.weight) / (heightInMeter * heightInMeter);
-
-      let status = 'Normal';
-
-      if (bmi < 18.5) status = 'Underweight';
-      else if (bmi >= 25 && bmi < 30) status = 'Overweight';
-      else if (bmi >= 30) status = 'Obesity';
-
-      navigate('/dashboard', {
-        state: {
-          result: {
-            status_kesehatan: status,
-            bmi: bmi.toFixed(1),
-            model_used: 'DEV_MODE',
-            probabilities: {},
-          },
-          input: form,
-        },
-      });
-
-      return;
-    }
-
-    // ── PRODUCTION MODE ─────────────────────
     setLoading(true);
 
-    try {
-      const { data } = await predictObesity(form);
+    // DEV MODE: skip API, langsung ke dashboard
+    if (DEV_MODE) {
+      await new Promise((r) => setTimeout(r, 800)); // simulasi loading
+      navigate('/dashboard');
+      return;
+    }
 
-      navigate('/dashboard', {
-        state: {
-          result: data.hasil_prediksi,
-          input: form,
-        },
-      });
+    // PRODUCTION MODE
+    try {
+      await predictObesity(form);
+      navigate('/dashboard');
     } catch (err) {
       if (err.response?.status === 401) {
         localStorage.removeItem('token');
@@ -190,7 +170,7 @@ export default function InputPage() {
     }
   };
 
-  // ── Render ──────────────────────────────────────────────────
+  // Render
   return (
     <div className="min-h-screen bg-bg flex flex-col">
       <Navbar />
@@ -200,12 +180,20 @@ export default function InputPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-extrabold text-primary">
-              Prediksi Tingkat Obesitas
+              {isProgress
+                ? 'Update Progress Kesehatan'
+                : 'Prediksi Tingkat Obesitas'}
             </h1>
             <p className="text-gray-500 text-sm mt-2">
-              Masukkan data kesehatan Anda untuk mendapatkan
-              <br />
-              analisis tingkat obesitas
+              {isProgress ? (
+                'Masukkan data kesehatan terbaru Anda untuk memantau perkembangan kondisi.'
+              ) : (
+                <>
+                  Masukkan data kesehatan Anda untuk mendapatkan
+                  <br />
+                  analisis tingkat obesitas
+                </>
+              )}
             </p>
           </div>
 
@@ -240,7 +228,7 @@ export default function InputPage() {
                 label="Tinggi Badan (cm)"
                 id="height"
                 type="number"
-                placeholder="Contoh: 170"
+                placeholder="Contoh: 167"
                 value={form.height}
                 onChange={set('height')}
                 required
@@ -351,7 +339,13 @@ export default function InputPage() {
                 disabled={loading}
               >
                 <Sparkles size={16} />
-                {loading ? 'Menganalisis...' : 'Generate Hasil Prediksi'}
+                {loading
+                  ? isProgress
+                    ? 'Menyimpan...'
+                    : 'Menganalisis...'
+                  : isProgress
+                    ? 'Simpan Update Progress'
+                    : 'Generate Hasil Prediksi'}
               </Button>
             </div>
           </div>

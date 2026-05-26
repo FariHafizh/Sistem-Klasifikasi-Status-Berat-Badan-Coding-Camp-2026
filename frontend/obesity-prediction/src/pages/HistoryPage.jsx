@@ -13,7 +13,7 @@ import {
 import DashboardLayout from '../components/DashboardLayout';
 import { getHistory } from '../services/api';
 
-const DEV_MODE = true;
+const DEV_MODE = false; // Set true untuk menggunakan data mock
 
 const MOCK_HISTORY = [
   {
@@ -104,7 +104,7 @@ export default function HistoryPage() {
       .finally(() => setLoading(false));
   }, [navigate]);
 
-  // Data chart: urutkan dari terlama ke terbaru
+  // Data chart: urutan dari terlama ke terbaru
   const chartData = [...history].reverse().map((h) => ({
     name: formatDate(h.tanggal).bulan,
     bmi: h.bmi,

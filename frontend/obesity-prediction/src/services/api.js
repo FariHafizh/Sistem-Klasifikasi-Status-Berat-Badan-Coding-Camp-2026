@@ -14,17 +14,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ── Auth ───────────────────────────────────────────────────────
+// Auth
 
 export const registerUser = ({ name, email, password }) =>
   api.post('/register', { username: name, email, password });
-// Response: { message }  → tidak ada token, user harus login manual setelahnya
+// Response: { message }
 
 export const loginUser = ({ email, password }) =>
   api.post('/login', { email, password });
 // Response: { message, username, access_token }
-
-// ── Predict ────────────────────────────────────────────────────
 
 /**
  * ─────────────────────────────────────────────────────────────
@@ -44,7 +42,7 @@ export const predictObesity = (form) => {
   const payload = {
     age: parseInt(form.age),
     gender_num: form.gender === 'male' ? 1 : 0,
-    height: parseFloat(form.height) * 100, // kirim dalam cm
+    height: parseFloat(form.height), // kirim dalam cm
     weight: parseFloat(form.weight),
     ch2o: parseFloat(form.water_intake),
     favc_num: form.high_calorie === 'yes' ? 1 : 0,
