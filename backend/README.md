@@ -34,19 +34,8 @@ Model:
 - `MODEL_DIR` (default menunjuk ke `../Artficial Intelligence`)
 - `DNN_MODEL_FILE` (default `model_dnn_obesitas.keras`)
 
-## Jalankan mode ML 
-Mode ini jalan di Python 3.14, karena tidak perlu TensorFlow.
-
-```powershell
-cd backend
-py -3.14 -m venv .venv
-. .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python app.py
-```
-
-## Jalankan mode DNN (TensorFlow)
-TensorFlow tidak tersedia untuk Python 3.14. Gunakan Python 3.12.
+## Jalankan backend (DNN + ML)
+Gunakan Python 3.12 agar TensorFlow tersedia.
 
 Catatan: pastikan Python 3.12 benar-benar terpasang. Cek dengan:
 
@@ -60,7 +49,7 @@ Jika muncul error path tidak ditemukan, install ulang Python 3.12 (python.org) a
 cd backend
 py -3.12 -m venv .venv312
 . .venv312\Scripts\Activate.ps1
-pip install -r requirements-dnn.txt
+pip install -r requirements.txt
 
 # Pastikan env var
 # $env:MODEL_TYPE = 'dnn'
@@ -69,6 +58,26 @@ python app.py
 ```
 
 Jika `MODEL_TYPE=dnn` tapi TensorFlow tidak bisa di-load, backend otomatis fallback ke ML.
+
+## Migration DB (disarankan)
+Secara default `AUTO_CREATE_TABLES` dimatikan. Gunakan migration:
+
+```powershell
+cd backend
+. .venv312\Scripts\Activate.ps1
+
+# Pertama kali (buat revision)
+flask db init
+flask db migrate -m "init"
+flask db upgrade
+```
+
+Jika folder `migrations/` sudah ada, cukup:
+
+```powershell
+flask db migrate -m "update"
+flask db upgrade
+```
 
 ## Catatan DB
 Default masih `localhost` di kode, tapi untuk demo online (history tersimpan) pakai Postgres free-tier (Supabase/Neon) dan set `DATABASE_URL`.

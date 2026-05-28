@@ -40,7 +40,7 @@ CORS(
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-# Konfigurasi API Key untuk GenAI (opsional)
+# Konfigurasi API Key untuk GenAI
 GENAI_API_KEY = os.getenv("GENAI_API_KEY")
 client = genai.Client(api_key=GENAI_API_KEY) if GENAI_API_KEY else None
 
@@ -59,7 +59,8 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 # BAGIAN INI HANYA UNTUK BIKIN TABEL (dev/local). Pada deploy, sebaiknya pakai migrate.
-if os.getenv("AUTO_CREATE_TABLES", "1") == "1":
+# Default: OFF. Set AUTO_CREATE_TABLES=1 untuk mengaktifkan.
+if os.getenv("AUTO_CREATE_TABLES", "0") == "1":
     with app.app_context():
         db.create_all()
 
