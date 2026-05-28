@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 try:
@@ -153,6 +154,7 @@ def predict():
     scc_num = data.get('scc_num')
     family_history_num = data.get('family_history_num')
     caec_num = data.get('caec_num')
+    replace_latest = bool(data.get('replace_latest'))
 
     # validasi data input
     if None in (age, gender_num, height, weight, ch2o, favc_num, faf, scc_num, family_history_num, caec_num):
@@ -194,6 +196,25 @@ def predict():
         return jsonify({'message': str(e)}), 400
     except Exception as e:
         return jsonify({'message': f'Gagal memproses model: {str(e)}'}), 500
+
+    # Jika update progress di bulan yang sama, hapus data terbaru dulu.
+    if replace_latest:
+        latest_prediction = (
+            PredictionHistory.query.filter_by(user_id=current_user_id)
+            .order_by(PredictionHistory.created_at.desc())
+            .first()
+        )
+        if latest_prediction and latest_prediction.created_at:
+            now = datetime.utcnow()
+            if (
+                latest_prediction.created_at.year == now.year
+                and latest_prediction.created_at.month == now.month
+            ):
+                Recommendation.query.filter_by(
+                    prediction_history_id=latest_prediction.id
+                ).delete()
+                db.session.delete(latest_prediction)
+                db.session.flush()
 
     # Simpan data mentah ke database
     new_history = PredictionHistory(

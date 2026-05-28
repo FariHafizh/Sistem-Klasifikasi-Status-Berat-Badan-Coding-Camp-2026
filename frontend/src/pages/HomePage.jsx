@@ -50,11 +50,21 @@ export default function HomePage() {
             data kesehatan berbasis AI. Mudah, cepat, dan gratis.
           </motion.p>
 
-          <motion.div
+          <motion.p
             variants={fadeUp}
             initial="hidden"
             animate="show"
             custom={2}
+            className="mt-3 text-sm font-semibold text-primary"
+          >
+            Sistem Prediksi Berat Badan dan Rekomendasi Action Plan
+          </motion.p>
+
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="show"
+            custom={3}
             className="mt-8 flex flex-wrap gap-3"
           >
             {/* Tombol :  */}

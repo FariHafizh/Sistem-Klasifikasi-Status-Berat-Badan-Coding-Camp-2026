@@ -4,7 +4,7 @@ import { Sparkles } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button, InputField, SelectField, RadioGroup } from '../components/ui';
-import { predictObesity } from '../services/api';
+import { predictObesity, getDashboard } from '../services/api';
 
 // ─────────────────────────────────────────────────────────────
 // DEV_MODE = true  → bypass API, langsung ke dashboard
@@ -66,6 +66,25 @@ export default function InputPage() {
   useEffect(() => {
     if (!DEV_MODE && !localStorage.getItem('token')) navigate('/login');
   }, [navigate]);
+
+  useEffect(() => {
+    const checkExisting = async () => {
+      if (DEV_MODE || isProgress) return;
+      try {
+        const { data } = await getDashboard();
+        if (data?.has_data) navigate('/dashboard');
+      } catch (err) {
+        if (err.response?.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        }
+      }
+    };
+
+    if (localStorage.getItem('token')) {
+      checkExisting();
+    }
+  }, [DEV_MODE, isProgress, navigate]);
 
   // ── Handlers ────────────────────────────────────────────────
   const set = (field) => (e) => {
@@ -156,7 +175,8 @@ export default function InputPage() {
 
     // PRODUCTION MODE
     try {
-      await predictObesity(form);
+      const replaceLatest = location.state?.replaceLatest === true;
+      await predictObesity(form, { replaceLatest });
       navigate('/dashboard');
     } catch (err) {
       if (err.response?.status === 401) {

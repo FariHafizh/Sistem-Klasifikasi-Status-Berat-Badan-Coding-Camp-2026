@@ -28,39 +28,90 @@ const MOCK_REKOMENDASI = `1. Pola Makan Harian yang Disarankan
 
 Catatan: Rekomendasi ini bersifat umum dan tidak menggantikan konsultasi dengan profesional kesehatan secara langsung.`;
 
+const cleanLine = (line) =>
+  line.replace(/\*\*/g, '').replace(/^[-•*]\s*/, '').trim();
+
 // Parse teks Gemini jadi 3 section
 const parseRekomendasi = (text) => {
-  if (!text) return { makan: '', olahraga: '', air: '', catatan: '' };
+  if (!text) return { makan: [], olahraga: [], air: [] };
   const lines = text.split('\n');
-  const sections = { makan: [], olahraga: [], air: [], catatan: [] };
+  const sections = { makan: [], olahraga: [], air: [] };
   let current = null;
   for (const line of lines) {
-    const l = line.trim();
-    if (!l) continue;
-    if (/^1\.|pola makan/i.test(l)) {
+    const raw = line.trim();
+    if (!raw) continue;
+    if (/^1\.|pola makan/i.test(raw)) {
       current = 'makan';
       continue;
     }
-    if (/^2\.|aktivitas|olahraga/i.test(l)) {
+    if (/^2\.|aktivitas|olahraga/i.test(raw)) {
       current = 'olahraga';
       continue;
     }
-    if (/^3\.|asupan air/i.test(l)) {
+    if (/^3\.|asupan air/i.test(raw)) {
       current = 'air';
       continue;
     }
-    if (/catatan/i.test(l)) {
-      current = 'catatan';
-      continue;
-    }
-    if (current) sections[current].push(l.replace(/^[-•*]\s*/, ''));
+    if (!current) continue;
+    const cleaned = cleanLine(raw);
+    if (cleaned) sections[current].push(cleaned);
   }
-  return {
-    makan: sections.makan.join('\n'),
-    olahraga: sections.olahraga.join('\n'),
-    air: sections.air.join('\n'),
-    catatan: sections.catatan.join(' '),
-  };
+  return sections;
+};
+
+const buildWeeklyPlan = (items) => {
+  const days = [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
+  const list = items.length ? items : ['Aktivitas ringan'];
+  return days.map((day, idx) => ({
+    day,
+    activity: list[idx % list.length],
+  }));
+};
+
+const downloadSchedulePng = (plan) => {
+  const canvas = document.createElement('canvas');
+  const width = 900;
+  const height = 700;
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = '#1f2a44';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText('Jadwal Olahraga Mingguan', 40, 60);
+
+  ctx.fillStyle = '#4b5563';
+  ctx.font = '16px sans-serif';
+  ctx.fillText('Berdasarkan rekomendasi AI', 40, 90);
+
+  let y = 140;
+  plan.forEach((item) => {
+    ctx.fillStyle = '#1f2a44';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText(item.day, 40, y);
+
+    ctx.fillStyle = '#374151';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(item.activity, 180, y);
+    y += 50;
+  });
+
+  const link = document.createElement('a');
+  link.download = 'jadwal-olahraga-mingguan.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 };
 
 export default function RecommendationPage() {
@@ -119,6 +170,7 @@ export default function RecommendationPage() {
   }, [fetchRekom, navigate]);
 
   const parsed = parseRekomendasi(rekomendasi);
+  const olahragaPlan = buildWeeklyPlan(parsed.olahraga);
 
   return (
     <DashboardLayout>
@@ -187,141 +239,90 @@ export default function RecommendationPage() {
             </Button>
           </div>
 
-          <div className="flex gap-6">
-            {/* ── Kolom kiri: Kebiasaan Harian ── */}
-            <div className="w-56 shrink-0 bg-white rounded-2xl p-6 shadow-sm border border-blue-100 self-start">
-              <h3 className="text-lg font-bold text-gray-800 mb-4 leading-snug">
-                Kebiasaan Harian Sehat
-              </h3>
-              <div className="flex flex-col gap-3">
-                {[
-                  {
-                    label: 'Minum Air Putih (2L)',
-                    sub: 'Terhidrasi sepanjang hari',
-                    icon: '💧',
-                  },
-                  {
-                    label: '10.000 Langkah',
-                    sub: 'Target aktivitas harian',
-                    icon: '🚶',
-                  },
-                  {
-                    label: 'Porsi Sayur 50%',
-                    sub: 'Kontrol volume makanan',
-                    icon: '🥗',
-                  },
-                  {
-                    label: 'Tidur 8 Jam',
-                    sub: 'Pemulihan optimal',
-                    icon: '🌙',
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="bg-[#f5f8ff] rounded-xl px-4 py-3 flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">
-                        {item.label}
-                      </p>
-                      <p className="text-sm text-gray-500 leading-relaxed">
-                        {item.sub}
-                      </p>
-                    </div>
-                    <span className="text-lg">{item.icon}</span>
-                  </div>
-                ))}
+          <div className="flex flex-col gap-6">
+            {/* Pola Makan */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Utensils size={20} className="text-[#2d3a8c]" />
+                <h3 className="text-lg font-bold text-gray-800">
+                  Pola Makan Harian
+                </h3>
+              </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
+                <ul className="space-y-2">
+                  {parsed.makan.length ? (
+                    parsed.makan.map((line, i) => (
+                      <li key={i} className="text-sm text-gray-700 leading-7">
+                        • {line}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-gray-400">
+                      Rekomendasi belum tersedia.
+                    </li>
+                  )}
+                </ul>
               </div>
             </div>
 
-            {/* Kolom kanan: Rekomendasi AI */}
-            <div className="flex-1 flex flex-col gap-6">
-              {/* Pola Makan */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Utensils size={20} className="text-[#2d3a8c]" />
-                  <h3 className="text-lg font-bold text-gray-800">
-                    Rekomendasi Pola Makan
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {parsed.makan
-                    .split('\n')
-                    .filter(Boolean)
-                    .reduce((acc, line, i, arr) => {
-                      if (i % Math.ceil(arr.length / 2) === 0) acc.push([]);
-                      acc[acc.length - 1].push(line);
-                      return acc;
-                    }, [])
-                    .map((group, gi) => (
-                      <div
-                        key={gi}
-                        className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mb-3 text-lg">
-                          {gi === 0 ? '🥗' : '🌿'}
-                        </div>
-                        <h4 className="font-bold text-gray-800 text-base mb-3">
-                          {gi === 0
-                            ? 'Defisit Kalori Terukur'
-                            : 'Diet Tinggi Serat & Kalori'}
-                        </h4>
-                        <ul className="space-y-1">
-                          {group.map((line, li) => (
-                            <li
-                              key={li}
-                              className="text-sm text-gray-600 leading-7"
-                            >
-                              • {line}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Olahraga */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
+            {/* Olahraga */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
                   <Dumbbell size={20} className="text-[#2d3a8c]" />
                   <h3 className="text-lg font-bold text-gray-800">
-                    Rekomendasi Olahraga
+                    Olahraga per Minggu
                   </h3>
                 </div>
-                <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100 flex gap-6">
-                  <div className="shrink-0 bg-[#f0f4ff] rounded-xl p-4 text-center min-w-30">
-                    <p className="text-sm text-gray-500 mb-1">Target Harian</p>
-                    <p className="text-3xl font-extrabold text-[#2d3a8c]">
-                      10.000
-                    </p>
-                    <p className="text-sm font-semibold text-gray-500 tracking-widest">
-                      LANGKAH
-                    </p>
-                  </div>
-                  <ul className="flex flex-col gap-3 justify-center">
-                    {parsed.olahraga
-                      .split('\n')
-                      .filter(Boolean)
-                      .map((line, i) => (
-                        <li
-                          key={i}
-                          className="flex gap-3 text-base text-gray-700 leading-7"
-                        >
-                          <span className="w-2 h-2 rounded-full bg-[#2d3a8c] shrink-0 mt-1.5" />
-                          <span>{line}</span>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!parsed.olahraga.length}
+                  onClick={() => downloadSchedulePng(olahragaPlan)}
+                >
+                  Download Jadwal
+                </Button>
               </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
+                <ul className="space-y-2">
+                  {parsed.olahraga.length ? (
+                    parsed.olahraga.map((line, i) => (
+                      <li key={i} className="text-sm text-gray-700 leading-7">
+                        • {line}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-gray-400">
+                      Rekomendasi belum tersedia.
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
 
-              {/* Catatan */}
-              {parsed.catatan && (
-                <p className="text-sm text-gray-400 italic px-1 leading-relaxed">
-                  {parsed.catatan}
-                </p>
-              )}
+            {/* Asupan Air */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={20} className="text-[#2d3a8c]" />
+                <h3 className="text-lg font-bold text-gray-800">
+                  Asupan Air Putih Harian
+                </h3>
+              </div>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
+                <ul className="space-y-2">
+                  {parsed.air.length ? (
+                    parsed.air.map((line, i) => (
+                      <li key={i} className="text-sm text-gray-700 leading-7">
+                        • {line}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-gray-400">
+                      Rekomendasi belum tersedia.
+                    </li>
+                  )}
+                </ul>
+              </div>
             </div>
           </div>
         </>
