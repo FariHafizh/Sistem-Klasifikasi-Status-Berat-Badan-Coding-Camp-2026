@@ -21,7 +21,22 @@ from flask_migrate import Migrate
 from inference import get_inference
 
 app = Flask(__name__)
-CORS(app)
+
+def _get_cors_origins() -> list[str]:
+    raw = (os.getenv("CORS_ORIGINS") or "").strip()
+    if raw:
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+
+CORS(
+    app,
+    resources={r"/*": {"origins": _get_cors_origins()}},
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
