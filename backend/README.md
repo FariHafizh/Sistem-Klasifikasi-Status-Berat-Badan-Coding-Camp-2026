@@ -23,6 +23,9 @@ Minimal untuk jalan:
 - `DATABASE_URL`
 - `JWT_SECRET_KEY`
 
+CORS:
+- `CORS_ORIGINS` (comma-separated). Contoh: `https://your-vercel-app.vercel.app,http://localhost:5173`
+
 Opsional:
 - `GENAI_API_KEY` (tanpa ini, `/recommendation` akan balas 503)
 
