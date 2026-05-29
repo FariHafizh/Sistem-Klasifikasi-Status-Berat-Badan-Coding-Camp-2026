@@ -18,7 +18,6 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from google import genai
 from flask_cors import CORS
 from flask_migrate import Migrate
-
 from inference import get_inference
 
 app = Flask(__name__)
