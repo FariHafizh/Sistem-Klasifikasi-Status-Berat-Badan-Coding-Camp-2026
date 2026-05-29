@@ -3,8 +3,14 @@
 ## Tech Stack
 
 <p align="left">
-  <img src="https://skillicons.dev/icons?i=python,flask,react,vite,postgres,git,github,vscode" />
+  <img src="https://skillicons.dev/icons?i=python,flask,react,vite,postgres,git" />
 </p>
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
+![Flask](https://img.shields.io/badge/Flask-3.1-black?logo=flask)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
+![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.19-FF6F00?logo=tensorflow)
 
 Aplikasi web untuk memprediksi status berat badan berdasarkan input kesehatan, menyimpan riwayat, dan memberi rekomendasi action plan.
 
