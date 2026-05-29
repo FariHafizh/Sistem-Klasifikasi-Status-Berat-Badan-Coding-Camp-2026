@@ -10,16 +10,16 @@ Aplikasi web untuk memprediksi status berat badan berdasarkan input kesehatan, m
 
 ## Fitur utama
 - Registrasi dan login (JWT)
-- Prediksi status berat badan (DNN + ML fallback)
+- Prediksi status berat badan (DNN + ML)
 - Dashboard ringkas hasil terbaru
 - Riwayat prediksi dan grafik progres
-- Rekomendasi AI (opsional dengan GENAI_API_KEY)
+- Rekomendasi AI (dengan Gemini 3.1)
 
 ## Teknologi
 - Frontend: React, Vite, Tailwind CSS, Recharts
 - Backend: Flask, SQLAlchemy, Flask-JWT-Extended, Flask-Migrate
 - Model: TensorFlow (DNN), scikit-learn (ML)
-- Database: PostgreSQL (Neon/Render)
+- Database: PostgreSQL (Neon)
 
 ## Struktur folder
 - frontend/           aplikasi React
@@ -30,7 +30,8 @@ Aplikasi web untuk memprediksi status berat badan berdasarkan input kesehatan, m
 ## Menjalankan lokal
 ### Backend
 1) Siapkan .env di backend/ (lihat .env.example)
-2) Jalankan:
+2) Bisa pakai .venv (gunakan python 3.10-3.12)
+3) Jalankan:
 
 ```powershell
 cd backend
@@ -60,9 +61,8 @@ flask db migrate -m "update"
 flask db upgrade
 ```
 
-## Deploy (Vercel + Render + Neon)
-- Backend (Render): set env DATABASE_URL, JWT_SECRET_KEY, CORS_ORIGINS, MODEL_TYPE=dnn, DNN_MODEL_FILE, GENAI_API_KEY (opsional), AUTO_CREATE_TABLES=0
-- Frontend (Vercel): set VITE_API_URL ke URL backend Render
+## Deploy (Vercel + Neon)
+- Frontend (Vercel): set VITE_API_URL 
 
 ## Catatan
 - Model default membaca artefak dari folder Artficial Intelligence.
