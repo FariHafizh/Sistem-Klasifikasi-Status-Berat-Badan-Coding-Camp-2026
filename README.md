@@ -1,4 +1,5 @@
 # Sistem Klasifikasi Status Berat Badan
+demo: https://sistem-klasifikasi-status-berat-bad.vercel.app/
 
 ## Tech Stack
 
