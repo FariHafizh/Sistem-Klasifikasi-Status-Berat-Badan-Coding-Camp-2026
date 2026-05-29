@@ -66,12 +66,8 @@ export default function RegisterPage() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errs.email = 'Format email tidak valid';
     if (!form.password) errs.password = 'Password wajib diisi';
-    else if (form.password.length < 8)
-      errs.password = 'Password minimal 8 karakter';
-    else if (!/[A-Z]/.test(form.password))
-      errs.password = 'Harus ada minimal 1 huruf kapital';
-    else if (!/[0-9]/.test(form.password))
-      errs.password = 'Harus ada minimal 1 angka';
+    else if (form.password.length < 6)
+      errs.password = 'Password minimal 6 karakter';
     return errs;
   };
 

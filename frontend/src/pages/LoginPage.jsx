@@ -4,7 +4,7 @@ import { Mail } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button, PasswordInput } from '../components/ui';
-import { loginUser } from '../services/api';
+import { loginUser, getDashboard } from '../services/api';
 
 // ─────────────────────────────────────────────────────────────
 // DEV_MODE = true, bypass backend, langsung masuk tanpa API
@@ -96,7 +96,22 @@ export default function LoginPage() {
       // Backend response: { message, username, access_token }
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('username', data.username);
-      navigate('/input');
+
+      try {
+        const { data: dashboard } = await getDashboard();
+        if (dashboard?.has_data) {
+          navigate('/dashboard');
+        } else {
+          navigate('/input');
+        }
+      } catch (fetchErr) {
+        if (fetchErr.response?.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        } else {
+          navigate('/input');
+        }
+      }
     } catch (err) {
       setApiError(
         err.response?.data?.message || 'Email atau password salah. Coba lagi.',

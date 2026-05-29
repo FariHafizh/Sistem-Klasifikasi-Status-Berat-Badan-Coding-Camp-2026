@@ -67,11 +67,14 @@ const getBmiInfo = (bmi) => {
   return { label: 'Obesitas (> 30)', pct: 95 };
 };
 
-const calcDaysLeft = (tanggal) => {
-  if (!tanggal) return 0;
+const isSameMonth = (tanggal) => {
+  if (!tanggal) return false;
   const last = new Date(tanggal);
-  const next = new Date(last.getTime() + 30 * 24 * 60 * 60 * 1000);
-  return Math.max(0, Math.ceil((next - new Date()) / (1000 * 60 * 60 * 24)));
+  const now = new Date();
+  return (
+    last.getFullYear() === now.getFullYear() &&
+    last.getMonth() === now.getMonth()
+  );
 };
 
 export default function DashboardPage() {
@@ -82,6 +85,7 @@ export default function DashboardPage() {
   // eslint-disable-next-line no-unused-vars
   const [prevWeight, setPrevWeight] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -110,8 +114,7 @@ export default function DashboardPage() {
   const status = data?.data_terbaru?.status_kesehatan;
   const weight = data?.data_terbaru?.weight;
   const tanggal = data?.data_terbaru?.tanggal_tes_terakhir;
-  const daysLeft = calcDaysLeft(tanggal);
-  const canUpdate = daysLeft === 0;
+  const sameMonth = isSameMonth(tanggal);
   const bmiInfo = getBmiInfo(bmi);
   const statusStyle = getStatus(status);
 
@@ -246,28 +249,57 @@ export default function DashboardPage() {
             </h2>
             <button
               onClick={() => {
-                if (canUpdate || DEV_MODE) {
+                if (DEV_MODE) {
+                  navigate('/input', { state: { isProgress: true } });
+                  return;
+                }
+                if (sameMonth) {
+                  setShowConfirm(true);
+                } else {
                   navigate('/input', { state: { isProgress: true } });
                 }
               }}
               className={`
                 inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-base transition-all duration-200
-                ${
-                  canUpdate || DEV_MODE
-                    ? 'bg-primary text-white hover:bg-[#16305e] shadow-lg shadow-blue-200 cursor-pointer'
-                    : 'bg-[#2d4a7a] text-white/80 cursor-not-allowed'
-                }
+                bg-primary text-white hover:bg-[#16305e] shadow-lg shadow-blue-200
               `}
             >
               <Lock size={20} />
               Update Progress Bulanan
-              {!canUpdate && !DEV_MODE && (
-                <span className="text-sm font-normal text-blue-200">
-                  (tersedia dalam {daysLeft} hari)
-                </span>
-              )}
             </button>
           </div>
+
+          {showConfirm && (
+            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl border border-blue-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">
+                  Update Progress Bulan Ini?
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Data progress di bulan ini akan diganti dengan input terbaru.
+                  Lanjutkan?
+                </p>
+                <div className="flex items-center justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowConfirm(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowConfirm(false);
+                      navigate('/input', {
+                        state: { isProgress: true, replaceLatest: true },
+                      });
+                    }}
+                  >
+                    Ya, Update
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </DashboardLayout>
