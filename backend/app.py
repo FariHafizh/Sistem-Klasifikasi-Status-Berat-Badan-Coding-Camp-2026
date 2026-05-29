@@ -317,6 +317,11 @@ def get_recommendation():
     current_user_id = int(get_jwt_identity())
 
     cache_only = (request.args.get('cache_only') or '').strip().lower() in ('1', 'true', 'yes')
+    force_generate = (request.args.get('force_generate') or '').strip().lower() in (
+        '1',
+        'true',
+        'yes',
+    )
 
     if client is None:
         return jsonify({'message': 'Fitur rekomendasi belum dikonfigurasi (GENAI_API_KEY belum di-set).'}), 503
@@ -330,7 +335,7 @@ def get_recommendation():
 
     # Jika rekomendasi untuk prediksi terbaru sudah ada, pakai cache DB.
     existing = Recommendation.query.filter_by(prediction_history_id=latest_prediction.id).first()
-    if existing:
+    if existing and not force_generate:
         return jsonify({
             'message': 'Rekomendasi berhasil diambil (cache).',
             'rekomendasi': existing.content_text,
@@ -338,7 +343,7 @@ def get_recommendation():
             'cached': True,
         }), 200
 
-    if cache_only:
+    if cache_only and not force_generate:
         return jsonify({
             'message': 'Belum ada rekomendasi tersimpan. Klik "Minta Rekomendasi" untuk membuatnya.',
             'has_data': True,
@@ -346,9 +351,13 @@ def get_recommendation():
             'rekomendasi': None,
         }), 200
 
+    if existing and force_generate:
+        db.session.delete(existing)
+        db.session.flush()
+
     # PROMPT GEMINI MENGGUNAKAN DATA USER
     prompt = f"""
-    Kamu adalah seorang ahli gizi dan pelatih kebugaran profesional. Tolong berikan rekomendasi kesehatan singkat , praktis, dan ramah untuk pengguna dengan profil medis berikut:
+    Kamu adalah seorang ahli gizi dan pelatih kebugaran profesional. Berikan rekomendasi kesehatan singkat, praktis, dan ramah untuk pengguna dengan profil medis berikut:
     - username: {User.query.get(current_user_id).username}
     - Umur: {latest_prediction.age} tahun
     - Jenis Kelamin: {'Laki-laki' if latest_prediction.gender_num == 1 else 'Perempuan'}
@@ -363,18 +372,44 @@ def get_recommendation():
     - Riwayat Keluarga dengan Overweight: {'Ya' if latest_prediction.family_history_num == 1 else 'Tidak'}
     - Kebiasaan Ngemil antara Waktu Makan: {'Ya' if latest_prediction.caec_num == 1 else 'Tidak'}
     
-    Berikan rekomendasi berupa:
-    1. Pola makan harian yang disarankan (termasuk contoh menu makanan yang sesuai dengan kondisi dan profil pengguna, serta preferensi umum orang Indonesia).
-    2. Aktivitas fisik/olahraga yang aman, cocok, dan sesuai dengan kondisi dan profil pengguna, serta preferensi umum orang Indonesia.
-    3. Anjuran asupan air.
+    Formatkan output secara konsisten dengan 3 bagian berikut saja:
+
+    Pola Makan Harian 
+    (Kalau dia underweight, tambahkan makan sore, dan cemilan di antara sarapan dan makan siang, kalau normal, overweight, dan obese biarkan default)
+    Metode: <1 kalimat>
+    Sarapan: <1 kalimat>
+    Makan Siang: <1 kalimat>
+    Makan Malam: <1 kalimat>
+    Tips: <1/2 kalimat> 
     
-    Tuliskan jawaban langsung pada poin-poin di atas tanpa basa-basi berlebih dan secara ringkas dengan bahasa yang mudah dipahami. 
-    Jadi ada 3 bagian yaitu makanan harian, aktivitas/olahraga, dan anjuran asupan air. Jangan buat bagian lain selain 3 bagian itu. 
-    Buat singkat dalam bentuk poin,secara rapi, dan hindari menyampaikan ulang informasi yang sudah ada di data profil pengguna, cukup fokus ke rekomendasi praktisnya saja.
-    Karena nanti rekomendasi ini akan dimasukkan ke plan harian pengguna.
-    Jika salah satu dari 3 bagian itu menggunakan suatu metode, gunakan metode terbaru yang paling update dan efektif.
+
+    Olahraga per Minggu
+    (Untuk jadwal mingguan, gunakan hanya sedikit kata saja, jenis dan durasi/repetisi)
+    (kalau hari istirahat cukup tulis "Istirahat")
+    Metode: <1 kalimat>
+    Jadwal Mingguan:
+    Senin: <1 kalimat>
+    Selasa: <1 kalimat>
+    Rabu: <1 kalimat>
+    Kamis: <1 kalimat>
+    Jumat: <1 kalimat>
+    Sabtu: <1 kalimat>
+    Minggu: <1 kalimat>
+    Tips: <1/2 kalimat>
+
+    Asupan Air Harian
+    (Jangan gunakan kata hingga, sampai, atau kata serupa. Cukup sebutkan jumlah gelas air yang direkomendasikan per hari)
+    Target: <1 kalimat> Gunakan template kalimat "x Gelas per hari"
     
-    Berikan catatan: Rekomendasi ini bersifat umum dan tidak menggantikan konsultasi dengan profesional kesehatan secara langsung. 
+
+    Aturan format:
+    - Jangan gunakan markdown, bullet, atau penomoran.
+    - Metode dan tips tidak boleh kosong.
+    - Gunakan kalimat yang jelas tapi jangan bertele-tele, to the point.
+    - Jangan gunakan tanda * atau **.
+    - Gunakan "Label: isi" persis seperti format di atas.
+    - Hindari menyampaikan ulang data profil pengguna; fokus ke rekomendasi praktis.
+    - Gunakan preferensi orang Indonesia baik dalam pola makan ataupun olahraga.
     """
     try:
         # Panggil model

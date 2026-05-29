@@ -29,7 +29,12 @@ const MOCK_REKOMENDASI = `1. Pola Makan Harian yang Disarankan
 Catatan: Rekomendasi ini bersifat umum dan tidak menggantikan konsultasi dengan profesional kesehatan secara langsung.`;
 
 const cleanLine = (line) =>
-  line.replace(/\*\*/g, '').replace(/^[-•*]\s*/, '').trim();
+  line
+    .replace(/[`*_]/g, '')
+    .replace(/^\s*[-•]\s*/, '')
+    .replace(/^\s*\d+\.?\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 // Parse teks Gemini jadi 3 section
 const parseRekomendasi = (text) => {
@@ -74,6 +79,53 @@ const buildWeeklyPlan = (items) => {
     day,
     activity: list[idx % list.length],
   }));
+};
+
+const parseWeeklyPlan = (items) => {
+  const days = [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
+  const byDay = {};
+  items.forEach((line) => {
+    const cleaned = cleanLine(line);
+    const match = cleaned.match(
+      /^(Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu)\s*[:\-]\s*(.+)$/i,
+    );
+    if (match) {
+      const day = match[1][0].toUpperCase() + match[1].slice(1).toLowerCase();
+      byDay[day] = match[2].trim();
+    }
+  });
+
+  if (Object.keys(byDay).length > 0) {
+    return days.map((day) => ({
+      day,
+      activity: byDay[day] || 'Aktivitas ringan',
+    }));
+  }
+
+  return buildWeeklyPlan(items);
+};
+
+const parseKeyValueLines = (lines) => {
+  const data = {};
+  const other = [];
+  lines.forEach((line) => {
+    const cleaned = cleanLine(line);
+    const match = cleaned.match(/^([^:]+):\s*(.+)$/);
+    if (match) {
+      data[match[1].trim().toLowerCase()] = match[2].trim();
+    } else if (cleaned) {
+      other.push(cleaned);
+    }
+  });
+  return { data, other };
 };
 
 const downloadSchedulePng = (plan) => {
@@ -143,7 +195,7 @@ export default function RecommendationPage() {
           setCached(false);
           return;
         }
-        const { data } = await getRecommendation(forceGenerate ? false : true);
+        const { data } = await getRecommendation(!forceGenerate, forceGenerate);
         setRekomendasi(data.rekomendasi);
         setCached(data.cached ?? false);
         if (data.rekomendasi) {
@@ -186,20 +238,20 @@ export default function RecommendationPage() {
   }, [cachedText, fetchRekom, navigate]);
 
   const parsed = parseRekomendasi(rekomendasi);
-  const olahragaPlan = buildWeeklyPlan(parsed.olahraga);
-  const formatLine = (line) => {
-    const idx = line.indexOf(':');
-    if (idx === -1) return { title: '', detail: line };
-    return {
-      title: line.slice(0, idx).trim(),
-      detail: line.slice(idx + 1).trim(),
-    };
-  };
+  const makanKV = parseKeyValueLines(parsed.makan);
+  const olahragaKV = parseKeyValueLines(parsed.olahraga);
+  const airKV = parseKeyValueLines(parsed.air);
+  const olahragaPlan = parseWeeklyPlan(parsed.olahraga);
+  const airTarget = airKV.data['target'] || '';
+  const airNumberMatch = airTarget.match(/(\d+(?:[\.,]\d+)?)/);
+  const airNumber = airNumberMatch ? airNumberMatch[1].replace(',', '.') : '-';
   const handleGenerateClick = () => {
     if (rekomendasi) {
       setShowConfirm(true);
       return;
     }
+    sessionStorage.removeItem('rekomendasi:text');
+    sessionStorage.removeItem('rekomendasi:meta');
     fetchRekom({ forceGenerate: true });
   };
 
@@ -279,32 +331,56 @@ export default function RecommendationPage() {
                 </h3>
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
-                <ul className="space-y-3">
-                  {parsed.makan.length ? (
-                    parsed.makan.map((line, i) => {
-                      const { title, detail } = formatLine(line);
-                      return (
-                        <li key={i} className="flex gap-3">
-                          <span className="mt-2 h-2 w-2 rounded-full bg-primary" />
-                          <div>
-                            {title && (
-                              <p className="text-sm font-semibold text-gray-800">
-                                {title}
-                              </p>
-                            )}
-                            <p className="text-sm text-gray-600 leading-6">
-                              {detail}
+                {parsed.makan.length ? (
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100">
+                        <p className="text-xs font-semibold text-[#2d3a8c] mb-1">
+                          Metode
+                        </p>
+                        <p className="text-sm text-gray-700 leading-6">
+                          {makanKV.data['metode'] || 'Belum tersedia.'}
+                        </p>
+                      </div>
+                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100">
+                        <p className="text-xs font-semibold text-[#2d3a8c] mb-1">
+                          Tips
+                        </p>
+                        <p className="text-sm text-gray-700 leading-6">
+                          {makanKV.data['tips'] || 'Belum tersedia.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        ['Sarapan', makanKV.data['sarapan']],
+                        ['Makan Siang', makanKV.data['makan siang']],
+                        ['Makan Sore', makanKV.data['makan sore']],
+                        ['Makan Malam', makanKV.data['makan malam']],
+                        ['Camilan', makanKV.data['camilan']],
+                      ]
+                        .filter(([, value]) => value)
+                        .map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="border border-gray-100 rounded-xl p-4"
+                          >
+                            <p className="text-xs font-semibold text-gray-500 mb-1">
+                              {label}
+                            </p>
+                            <p className="text-sm text-gray-700 leading-6">
+                              {value}
                             </p>
                           </div>
-                        </li>
-                      );
-                    })
-                  ) : (
-                    <li className="text-sm text-gray-400">
-                      Rekomendasi belum tersedia.
-                    </li>
-                  )}
-                </ul>
+                        ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">
+                    Rekomendasi belum tersedia.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -327,32 +403,53 @@ export default function RecommendationPage() {
                 </Button>
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
-                <ul className="space-y-3">
-                  {parsed.olahraga.length ? (
-                    parsed.olahraga.map((line, i) => {
-                      const { title, detail } = formatLine(line);
-                      return (
-                        <li key={i} className="flex gap-3">
-                          <span className="mt-2 h-2 w-2 rounded-full bg-primary" />
-                          <div>
-                            {title && (
-                              <p className="text-sm font-semibold text-gray-800">
-                                {title}
-                              </p>
-                            )}
-                            <p className="text-sm text-gray-600 leading-6">
-                              {detail}
-                            </p>
+                {parsed.olahraga.length ? (
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100">
+                        <p className="text-xs font-semibold text-[#2d3a8c] mb-1">
+                          Metode
+                        </p>
+                        <p className="text-sm text-gray-700 leading-6">
+                          {olahragaKV.data['metode'] || 'Belum tersedia.'}
+                        </p>
+                      </div>
+                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100">
+                        <p className="text-xs font-semibold text-[#2d3a8c] mb-1">
+                          Tips
+                        </p>
+                        <p className="text-sm text-gray-700 leading-6">
+                          {olahragaKV.data['tips'] || 'Belum tersedia.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-100 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-gray-500 mb-3">
+                        Jadwal Mingguan
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {olahragaPlan.map((item) => (
+                          <div
+                            key={item.day}
+                            className="flex items-start gap-3"
+                          >
+                            <span className="text-xs font-semibold text-gray-500 w-16">
+                              {item.day}
+                            </span>
+                            <span className="text-sm text-gray-700 leading-6">
+                              {item.activity}
+                            </span>
                           </div>
-                        </li>
-                      );
-                    })
-                  ) : (
-                    <li className="text-sm text-gray-400">
-                      Rekomendasi belum tersedia.
-                    </li>
-                  )}
-                </ul>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">
+                    Rekomendasi belum tersedia.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -365,32 +462,27 @@ export default function RecommendationPage() {
                 </h3>
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
-                <ul className="space-y-3">
-                  {parsed.air.length ? (
-                    parsed.air.map((line, i) => {
-                      const { title, detail } = formatLine(line);
-                      return (
-                        <li key={i} className="flex gap-3">
-                          <span className="mt-2 h-2 w-2 rounded-full bg-primary" />
-                          <div>
-                            {title && (
-                              <p className="text-sm font-semibold text-gray-800">
-                                {title}
-                              </p>
-                            )}
-                            <p className="text-sm text-gray-600 leading-6">
-                              {detail}
-                            </p>
-                          </div>
-                        </li>
-                      );
-                    })
-                  ) : (
-                    <li className="text-sm text-gray-400">
-                      Rekomendasi belum tersedia.
-                    </li>
-                  )}
-                </ul>
+                {parsed.air.length ? (
+                  <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
+                    <img
+                      src="/gelas.png"
+                      alt="Ilustrasi gelas air"
+                      className="w-32 md:w-40 h-auto drop-shadow-md"
+                    />
+                    <div className="flex items-end gap-3">
+                      <span className="text-5xl md:text-6xl font-extrabold text-[#2d3a8c] leading-none">
+                        {airNumber}
+                      </span>
+                      <span className="text-base text-gray-600 mb-1">
+                        Gelas per hari
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">
+                    Rekomendasi belum tersedia.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -404,6 +496,8 @@ export default function RecommendationPage() {
             onCancel={() => setShowConfirm(false)}
             onConfirm={() => {
               setShowConfirm(false);
+              sessionStorage.removeItem('rekomendasi:text');
+              sessionStorage.removeItem('rekomendasi:meta');
               fetchRekom({ forceGenerate: true });
             }}
           />

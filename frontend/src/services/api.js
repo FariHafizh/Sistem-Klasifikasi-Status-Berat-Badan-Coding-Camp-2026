@@ -68,8 +68,13 @@ export const getDashboard = () => api.get('/dashboard');
 
 // ── Recommendation ─────────────────────────────────────────────
 
-export const getRecommendation = (cacheOnly = false) =>
-  api.get('/recommendation', { params: { cache_only: cacheOnly ? '1' : '0' } });
+export const getRecommendation = (cacheOnly = false, forceGenerate = false) =>
+  api.get('/recommendation', {
+    params: {
+      cache_only: cacheOnly ? '1' : '0',
+      force_generate: forceGenerate ? '1' : '0',
+    },
+  });
 // Response: { message, rekomendasi, has_data, cached }
 
 export default api;
