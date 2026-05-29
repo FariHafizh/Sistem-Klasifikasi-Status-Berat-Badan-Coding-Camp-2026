@@ -10,7 +10,7 @@ import {
   Minus,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
-import { Button } from '../components/ui';
+import { Button, ConfirmModal } from '../components/ui';
 import { getDashboard } from '../services/api';
 
 const DEV_MODE = false; // Set true untuk menggunakan data mock
@@ -81,10 +81,20 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const username = localStorage.getItem('username') || 'Pengguna';
 
-  const [data, setData] = useState(null);
+  const cachedDashboardRaw = sessionStorage.getItem('dashboard:data');
+  let cachedDashboard = null;
+  try {
+    cachedDashboard = cachedDashboardRaw
+      ? JSON.parse(cachedDashboardRaw)
+      : null;
+  } catch {
+    cachedDashboard = null;
+  }
+
+  const [data, setData] = useState(cachedDashboard);
   // eslint-disable-next-line no-unused-vars
   const [prevWeight, setPrevWeight] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedDashboard);
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
@@ -99,16 +109,23 @@ export default function DashboardPage() {
       }, 500);
       return;
     }
+    const hasCache = !!cachedDashboard;
+    if (hasCache) setLoading(false);
     getDashboard()
-      .then(({ data: d }) => setData(d))
+      .then(({ data: d }) => {
+        setData(d);
+        sessionStorage.setItem('dashboard:data', JSON.stringify(d));
+      })
       .catch((err) => {
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
           navigate('/login');
         }
       })
-      .finally(() => setLoading(false));
-  }, [navigate]);
+      .finally(() => {
+        if (!hasCache) setLoading(false);
+      });
+  }, [cachedDashboard, navigate]);
 
   const bmi = data?.data_terbaru?.bmi;
   const status = data?.data_terbaru?.status_kesehatan;
@@ -269,37 +286,20 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {showConfirm && (
-            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl border border-blue-100">
-                <h3 className="text-lg font-bold text-gray-800 mb-2">
-                  Update Progress Bulan Ini?
-                </h3>
-                <p className="text-sm text-gray-600 mb-6">
-                  Data progress di bulan ini akan diganti dengan input terbaru.
-                  Lanjutkan?
-                </p>
-                <div className="flex items-center justify-end gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowConfirm(false)}
-                  >
-                    Batal
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowConfirm(false);
-                      navigate('/input', {
-                        state: { isProgress: true, replaceLatest: true },
-                      });
-                    }}
-                  >
-                    Ya, Update
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          <ConfirmModal
+            open={showConfirm}
+            title="Update Progress Bulan Ini?"
+            message="Data progress di bulan ini akan diganti dengan input terbaru. Lanjutkan?"
+            cancelText="Batal"
+            confirmText="Ya, Update"
+            onCancel={() => setShowConfirm(false)}
+            onConfirm={() => {
+              setShowConfirm(false);
+              navigate('/input', {
+                state: { isProgress: true, replaceLatest: true },
+              });
+            }}
+          />
         </>
       )}
     </DashboardLayout>

@@ -77,8 +77,15 @@ const formatDate = (str) => {
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cachedHistoryRaw = sessionStorage.getItem('history:data');
+  let cachedHistory = [];
+  try {
+    cachedHistory = cachedHistoryRaw ? JSON.parse(cachedHistoryRaw) : [];
+  } catch {
+    cachedHistory = [];
+  }
+  const [history, setHistory] = useState(cachedHistory);
+  const [loading, setLoading] = useState(!cachedHistory.length);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -93,16 +100,24 @@ export default function HistoryPage() {
       }, 500);
       return;
     }
+    const hasCache = cachedHistory.length > 0;
+    if (hasCache) setLoading(false);
     getHistory()
-      .then(({ data }) => setHistory(data.data ?? []))
+      .then(({ data }) => {
+        const list = data.data ?? [];
+        setHistory(list);
+        sessionStorage.setItem('history:data', JSON.stringify(list));
+      })
       .catch((err) => {
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
           navigate('/login');
         }
       })
-      .finally(() => setLoading(false));
-  }, [navigate]);
+      .finally(() => {
+        if (!hasCache) setLoading(false);
+      });
+  }, [cachedHistory.length, navigate]);
 
   // Data chart: urutan dari terlama ke terbaru
   const chartData = [...history].reverse().map((h) => ({

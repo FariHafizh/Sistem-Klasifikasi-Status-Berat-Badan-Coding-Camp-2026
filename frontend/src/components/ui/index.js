@@ -1,4 +1,5 @@
 export { default as Button } from './Button';
+export { default as ConfirmModal } from './ConfirmModal';
 export { default as InputField } from './InputField';
 export { default as SelectField } from './SelectField';
 export { default as RadioGroup } from './RadioGroup';

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Utensils, Dumbbell, Sparkles, Loader2 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
-import { Button } from '../components/ui';
+import { Button, ConfirmModal } from '../components/ui';
 import { getRecommendation } from '../services/api';
 
 const DEV_MODE = false;
@@ -116,16 +116,25 @@ const downloadSchedulePng = (plan) => {
 
 export default function RecommendationPage() {
   const navigate = useNavigate();
-  const [rekomendasi, setRekomendasi] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cachedText = sessionStorage.getItem('rekomendasi:text');
+  const cachedMeta = sessionStorage.getItem('rekomendasi:meta');
+  let cachedMetaValue = null;
+  try {
+    cachedMetaValue = cachedMeta ? JSON.parse(cachedMeta) : null;
+  } catch {
+    cachedMetaValue = null;
+  }
+  const [rekomendasi, setRekomendasi] = useState(cachedText || null);
+  const [loading, setLoading] = useState(!cachedText);
   const [generating, setGenerating] = useState(false);
-  const [cached, setCached] = useState(false);
+  const [cached, setCached] = useState(cachedMetaValue?.cached ?? false);
   const [error, setError] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const fetchRekom = useCallback(
-    async (forceGenerate = false) => {
-      if (!forceGenerate) setLoading(true);
-      else setGenerating(true);
+    async ({ forceGenerate = false, silent = false } = {}) => {
+      if (!forceGenerate && !silent) setLoading(true);
+      if (forceGenerate) setGenerating(true);
       setError('');
       try {
         if (DEV_MODE) {
@@ -137,6 +146,13 @@ export default function RecommendationPage() {
         const { data } = await getRecommendation(forceGenerate ? false : true);
         setRekomendasi(data.rekomendasi);
         setCached(data.cached ?? false);
+        if (data.rekomendasi) {
+          sessionStorage.setItem('rekomendasi:text', data.rekomendasi);
+          sessionStorage.setItem(
+            'rekomendasi:meta',
+            JSON.stringify({ cached: data.cached ?? false }),
+          );
+        }
       } catch (err) {
         if (err.response?.status === 401) {
           localStorage.removeItem('token');
@@ -163,14 +179,29 @@ export default function RecommendationPage() {
         return;
       }
 
-      await fetchRekom();
+      await fetchRekom({ silent: !!cachedText });
     };
 
     init();
-  }, [fetchRekom, navigate]);
+  }, [cachedText, fetchRekom, navigate]);
 
   const parsed = parseRekomendasi(rekomendasi);
   const olahragaPlan = buildWeeklyPlan(parsed.olahraga);
+  const formatLine = (line) => {
+    const idx = line.indexOf(':');
+    if (idx === -1) return { title: '', detail: line };
+    return {
+      title: line.slice(0, idx).trim(),
+      detail: line.slice(idx + 1).trim(),
+    };
+  };
+  const handleGenerateClick = () => {
+    if (rekomendasi) {
+      setShowConfirm(true);
+      return;
+    }
+    fetchRekom({ forceGenerate: true });
+  };
 
   return (
     <DashboardLayout>
@@ -204,14 +235,14 @@ export default function RecommendationPage() {
             Klik tombol di bawah untuk membuat rekomendasi kesehatan personal
             berbasis AI.
           </p>
-          <Button onClick={() => fetchRekom(true)} disabled={generating}>
+          <Button onClick={handleGenerateClick} disabled={generating}>
             {generating ? (
               <>
                 <Loader2 size={16} className="animate-spin" /> Membuat...
               </>
             ) : (
               <>
-                <Sparkles size={16} /> Generate Rekomendasi
+                <Sparkles size={16} /> Buat Rekomendasi
               </>
             )}
           </Button>
@@ -223,7 +254,7 @@ export default function RecommendationPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchRekom(true)}
+              onClick={handleGenerateClick}
               disabled={generating}
             >
               {generating ? (
@@ -232,8 +263,7 @@ export default function RecommendationPage() {
                 </>
               ) : (
                 <>
-                  <Sparkles size={14} />{' '}
-                  {cached ? 'Buat Rekomendasi Baru' : 'Generate Ulang'}
+                  <Sparkles size={14} /> Buat Rekomendasi
                 </>
               )}
             </Button>
@@ -249,13 +279,26 @@ export default function RecommendationPage() {
                 </h3>
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {parsed.makan.length ? (
-                    parsed.makan.map((line, i) => (
-                      <li key={i} className="text-sm text-gray-700 leading-7">
-                        • {line}
-                      </li>
-                    ))
+                    parsed.makan.map((line, i) => {
+                      const { title, detail } = formatLine(line);
+                      return (
+                        <li key={i} className="flex gap-3">
+                          <span className="mt-2 h-2 w-2 rounded-full bg-primary" />
+                          <div>
+                            {title && (
+                              <p className="text-sm font-semibold text-gray-800">
+                                {title}
+                              </p>
+                            )}
+                            <p className="text-sm text-gray-600 leading-6">
+                              {detail}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li className="text-sm text-gray-400">
                       Rekomendasi belum tersedia.
@@ -284,13 +327,26 @@ export default function RecommendationPage() {
                 </Button>
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {parsed.olahraga.length ? (
-                    parsed.olahraga.map((line, i) => (
-                      <li key={i} className="text-sm text-gray-700 leading-7">
-                        • {line}
-                      </li>
-                    ))
+                    parsed.olahraga.map((line, i) => {
+                      const { title, detail } = formatLine(line);
+                      return (
+                        <li key={i} className="flex gap-3">
+                          <span className="mt-2 h-2 w-2 rounded-full bg-primary" />
+                          <div>
+                            {title && (
+                              <p className="text-sm font-semibold text-gray-800">
+                                {title}
+                              </p>
+                            )}
+                            <p className="text-sm text-gray-600 leading-6">
+                              {detail}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li className="text-sm text-gray-400">
                       Rekomendasi belum tersedia.
@@ -309,13 +365,26 @@ export default function RecommendationPage() {
                 </h3>
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {parsed.air.length ? (
-                    parsed.air.map((line, i) => (
-                      <li key={i} className="text-sm text-gray-700 leading-7">
-                        • {line}
-                      </li>
-                    ))
+                    parsed.air.map((line, i) => {
+                      const { title, detail } = formatLine(line);
+                      return (
+                        <li key={i} className="flex gap-3">
+                          <span className="mt-2 h-2 w-2 rounded-full bg-primary" />
+                          <div>
+                            {title && (
+                              <p className="text-sm font-semibold text-gray-800">
+                                {title}
+                              </p>
+                            )}
+                            <p className="text-sm text-gray-600 leading-6">
+                              {detail}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })
                   ) : (
                     <li className="text-sm text-gray-400">
                       Rekomendasi belum tersedia.
@@ -325,6 +394,19 @@ export default function RecommendationPage() {
               </div>
             </div>
           </div>
+
+          <ConfirmModal
+            open={showConfirm}
+            title="Buat Rekomendasi Baru?"
+            message="Rekomendasi saat ini akan diganti dengan hasil terbaru dari AI. Lanjutkan?"
+            cancelText="Batal"
+            confirmText="Ya, Buat Baru"
+            onCancel={() => setShowConfirm(false)}
+            onConfirm={() => {
+              setShowConfirm(false);
+              fetchRekom({ forceGenerate: true });
+            }}
+          />
         </>
       )}
     </DashboardLayout>
