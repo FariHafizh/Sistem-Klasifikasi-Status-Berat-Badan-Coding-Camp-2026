@@ -116,14 +116,43 @@ const parseWeeklyPlan = (items) => {
 const parseKeyValueLines = (lines) => {
   const data = {};
   const other = [];
+  const knownLabels = [
+    'metode',
+    'tips',
+    'target',
+    'sarapan',
+    'makan siang',
+    'makan sore',
+    'makan malam',
+    'camilan',
+  ];
   lines.forEach((line) => {
     const cleaned = cleanLine(line);
-    const match = cleaned.match(/^([^:]+):\s*(.+)$/);
-    if (match) {
-      data[match[1].trim().toLowerCase()] = match[2].trim();
-    } else if (cleaned) {
-      other.push(cleaned);
+    const colonMatch = cleaned.match(/^([^:]+):\s*(.+)$/);
+    if (colonMatch) {
+      data[colonMatch[1].trim().toLowerCase()] = colonMatch[2].trim();
+      return;
     }
+
+    const looseMatch = cleaned.match(/^([A-Za-z\s]+)[\-–—]\s*(.+)$/);
+    if (looseMatch) {
+      const label = looseMatch[1].trim().toLowerCase();
+      if (knownLabels.includes(label)) {
+        data[label] = looseMatch[2].trim();
+        return;
+      }
+    }
+
+    const spaceMatch = cleaned.match(/^([A-Za-z\s]+)\s+(.+)$/);
+    if (spaceMatch) {
+      const label = spaceMatch[1].trim().toLowerCase();
+      if (knownLabels.includes(label)) {
+        data[label] = spaceMatch[2].trim();
+        return;
+      }
+    }
+
+    if (cleaned) other.push(cleaned);
   });
   return { data, other };
 };
@@ -131,7 +160,10 @@ const parseKeyValueLines = (lines) => {
 const downloadSchedulePng = (plan) => {
   const canvas = document.createElement('canvas');
   const width = 900;
-  const height = 700;
+  const rowHeight = 64;
+  const headerHeight = 44;
+  const topPadding = 140;
+  const height = topPadding + headerHeight + rowHeight * plan.length + 40;
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -148,16 +180,73 @@ const downloadSchedulePng = (plan) => {
   ctx.font = '16px sans-serif';
   ctx.fillText('Berdasarkan rekomendasi AI', 40, 90);
 
-  let y = 140;
+  const tableX = 40;
+  const tableY = topPadding;
+  const tableWidth = width - tableX * 2;
+  const dayColWidth = 140;
+  const activityColWidth = tableWidth - dayColWidth;
+
+  const wrapText = (text, x, y, maxWidth, lineHeight) => {
+    const words = text.split(' ');
+    let line = '';
+    let offsetY = 0;
+    words.forEach((word, index) => {
+      const testLine = `${line}${word} `;
+      const { width: testWidth } = ctx.measureText(testLine);
+      if (testWidth > maxWidth && index > 0) {
+        ctx.fillText(line.trim(), x, y + offsetY);
+        line = `${word} `;
+        offsetY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    });
+    ctx.fillText(line.trim(), x, y + offsetY);
+    return offsetY + lineHeight;
+  };
+
+  ctx.fillStyle = '#eef2ff';
+  ctx.fillRect(tableX, tableY, tableWidth, headerHeight);
+
+  ctx.strokeStyle = '#dbeafe';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(tableX, tableY, tableWidth, headerHeight);
+  ctx.beginPath();
+  ctx.moveTo(tableX + dayColWidth, tableY);
+  ctx.lineTo(tableX + dayColWidth, tableY + headerHeight);
+  ctx.stroke();
+
+  ctx.fillStyle = '#1f2a44';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText('Hari', tableX + 16, tableY + 28);
+  ctx.fillText('Aktivitas', tableX + dayColWidth + 16, tableY + 28);
+
+  let y = tableY + headerHeight;
   plan.forEach((item) => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(tableX, y, tableWidth, rowHeight);
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.strokeRect(tableX, y, tableWidth, rowHeight);
+    ctx.beginPath();
+    ctx.moveTo(tableX + dayColWidth, y);
+    ctx.lineTo(tableX + dayColWidth, y + rowHeight);
+    ctx.stroke();
+
     ctx.fillStyle = '#1f2a44';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.fillText(item.day, 40, y);
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(item.day, tableX + 16, y + 38);
 
     ctx.fillStyle = '#374151';
-    ctx.font = '16px sans-serif';
-    ctx.fillText(item.activity, 180, y);
-    y += 50;
+    ctx.font = '14px sans-serif';
+    wrapText(
+      item.activity,
+      tableX + dayColWidth + 16,
+      y + 28,
+      activityColWidth - 24,
+      18,
+    );
+
+    y += rowHeight;
   });
 
   const link = document.createElement('a');
@@ -463,17 +552,17 @@ export default function RecommendationPage() {
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
                 {parsed.air.length ? (
-                  <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-6">
                     <img
                       src="/gelas.png"
                       alt="Ilustrasi gelas air"
-                      className="w-32 md:w-40 h-auto drop-shadow-md"
+                      className="w-24 md:w-28 h-auto drop-shadow-md"
                     />
-                    <div className="flex items-end gap-3">
+                    <div className="flex items-center gap-3">
                       <span className="text-5xl md:text-6xl font-extrabold text-[#2d3a8c] leading-none">
                         {airNumber}
                       </span>
-                      <span className="text-base text-gray-600 mb-1">
+                      <span className="text-base text-gray-600">
                         Gelas per hari
                       </span>
                     </div>
@@ -484,6 +573,13 @@ export default function RecommendationPage() {
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
+              <p className="text-sm text-gray-600">
+                Catatan: Rekomendasi ini bersifat umum dan tidak menggantikan
+                konsultasi dengan profesional secara langsung.
+              </p>
             </div>
           </div>
 
