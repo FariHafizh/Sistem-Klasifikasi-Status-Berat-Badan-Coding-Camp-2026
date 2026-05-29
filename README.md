@@ -1,5 +1,11 @@
 # Sistem Klasifikasi Status Berat Badan
 
+## Tech Stack
+
+<p align="left">
+  <img src="https://skillicons.dev/icons?i=python,flask,react,vite,postgres,git,github,vscode" />
+</p>
+
 Aplikasi web untuk memprediksi status berat badan berdasarkan input kesehatan, menyimpan riwayat, dan memberi rekomendasi action plan.
 
 ## Fitur utama
