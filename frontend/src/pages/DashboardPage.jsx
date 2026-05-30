@@ -212,13 +212,21 @@ export default function DashboardPage() {
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-blue-100">
               <div className="flex items-center gap-2 text-gray-400 mb-4">
                 <Heart size={18} />
-                <span className="text-sm">Status Kesehatan</span>
+                <span className="text-sm">Status Berat Badan</span>
               </div>
               <span
                 className={`inline-flex items-center justify-center text-lg font-semibold px-6 py-2.5 rounded-full border ${statusStyle.badge}`}
               >
                 {statusStyle.label}
               </span>
+              <p className="text-sm text-gray-500 mt-3">
+                Confidence Score:{' '}
+                <span className="font-semibold text-gray-700">
+                  {data?.data_terbaru?.confidence_score
+                    ? `${(data.data_terbaru.confidence_score * 100).toFixed(1)}%`
+                    : '-'}
+                </span>
+              </p>
             </div>
 
             {/* Berat Card — dengan indikator naik/turun */}

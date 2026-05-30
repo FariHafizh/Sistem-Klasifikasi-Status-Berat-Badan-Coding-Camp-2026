@@ -205,6 +205,8 @@ def predict():
         inference = get_inference()
         model_result = inference.predict(features_for_model)
         status = model_result.get("prediction", "Unknown")
+        probabilities = model_result.get("probabilities") or {}
+        confidence_score = max(probabilities.values()) if probabilities else None
     except ValueError as e:
         return jsonify({'message': str(e)}), 400
     except Exception as e:
@@ -243,7 +245,8 @@ def predict():
         scc_num=scc_num,
         family_history_num=family_history_num,
         caec_num=caec_num,
-        status_kesehatan=status
+        status_kesehatan=status,
+        confidence_score=confidence_score,
     )
 
     db.session.add(new_history)
@@ -321,6 +324,7 @@ def get_dashboard():
             'weight': latest_prediction.weight,
             'bmi': round(float(latest_prediction.bmi), 2),
             'status_kesehatan': latest_prediction.status_kesehatan,
+            'confidence_score': latest_prediction.confidence_score,
             'tanggal_tes_terakhir': latest_prediction.created_at.strftime("%Y-%m-%d")
         }
     }), 200

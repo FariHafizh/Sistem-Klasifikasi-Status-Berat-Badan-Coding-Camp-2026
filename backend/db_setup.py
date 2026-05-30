@@ -32,6 +32,7 @@ class PredictionHistory(db.Model):
     
     # data output
     status_kesehatan = db.Column(db.String(50), nullable=False)
+    confidence_score = db.Column(db.Float, nullable=True)
     
     #catat waktu
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
