@@ -48,9 +48,9 @@ const STATUS_STYLE = {
     badge: 'bg-yellow-100 text-yellow-700',
     label: 'Overweight',
   },
-  Obesity_Type_I: { badge: 'bg-red-100 text-red-600', label: 'Obesitas' },
-  Obesity_Type_II: { badge: 'bg-red-100 text-red-600', label: 'Obesitas' },
-  Obesity_Type_III: { badge: 'bg-red-100 text-red-600', label: 'Obesitas' },
+  Obesity_Type_I: { badge: 'bg-orange-100 text-orange-700', label: 'Obesitas' },
+  Obesity_Type_II: { badge: 'bg-orange-100 text-orange-700', label: 'Obesitas' },
+  Obesity_Type_III: { badge: 'bg-orange-100 text-orange-700', label: 'Obesitas' },
 };
 const getStatus = (key) =>
   STATUS_STYLE[key] ?? {

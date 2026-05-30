@@ -423,19 +423,19 @@ export default function RecommendationPage() {
                 {parsed.makan.length ? (
                   <div className="flex flex-col gap-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100">
-                        <p className="text-xs font-semibold text-[#2d3a8c] mb-1">
+                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100 h-full">
+                        <p className="text-sm font-semibold text-[#6b7bb5] mb-1">
                           Metode
                         </p>
-                        <p className="text-sm text-gray-700 leading-6">
+                        <p className="text-[13px] text-gray-700 leading-6">
                           {makanKV.data['metode'] || 'Belum tersedia.'}
                         </p>
                       </div>
-                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100">
-                        <p className="text-xs font-semibold text-[#2d3a8c] mb-1">
+                      <div className="bg-[#f5f0ff] rounded-xl p-4 border border-[#e4d6ff] h-full">
+                        <p className="text-sm font-semibold text-[#6f56d9] mb-1">
                           Tips
                         </p>
-                        <p className="text-sm text-gray-700 leading-6">
+                        <p className="text-[13px] text-gray-700 leading-6">
                           {makanKV.data['tips'] || 'Belum tersedia.'}
                         </p>
                       </div>
@@ -453,12 +453,12 @@ export default function RecommendationPage() {
                         .map(([label, value]) => (
                           <div
                             key={label}
-                            className="border border-gray-100 rounded-xl p-4"
+                            className="border border-gray-100 rounded-xl p-4 h-full"
                           >
-                            <p className="text-xs font-semibold text-gray-500 mb-1">
+                            <p className="text-sm font-semibold text-[#6b7bb5] mb-1">
                               {label}
                             </p>
-                            <p className="text-sm text-gray-700 leading-6">
+                            <p className="text-[13px] text-gray-700 leading-6">
                               {value}
                             </p>
                           </div>
@@ -495,38 +495,38 @@ export default function RecommendationPage() {
                 {parsed.olahraga.length ? (
                   <div className="flex flex-col gap-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100">
-                        <p className="text-xs font-semibold text-[#2d3a8c] mb-1">
+                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100 h-full">
+                        <p className="text-sm font-semibold text-[#6b7bb5] mb-1">
                           Metode
                         </p>
-                        <p className="text-sm text-gray-700 leading-6">
+                        <p className="text-[13px] text-gray-700 leading-6">
                           {olahragaKV.data['metode'] || 'Belum tersedia.'}
                         </p>
                       </div>
-                      <div className="bg-[#f7f9ff] rounded-xl p-4 border border-blue-100">
-                        <p className="text-xs font-semibold text-[#2d3a8c] mb-1">
+                      <div className="bg-[#f5f0ff] rounded-xl p-4 border border-[#e4d6ff] h-full">
+                        <p className="text-sm font-semibold text-[#6f56d9] mb-1">
                           Tips
                         </p>
-                        <p className="text-sm text-gray-700 leading-6">
+                        <p className="text-[13px] text-gray-700 leading-6">
                           {olahragaKV.data['tips'] || 'Belum tersedia.'}
                         </p>
                       </div>
                     </div>
 
                     <div className="border border-gray-100 rounded-xl p-4">
-                      <p className="text-xs font-semibold text-gray-500 mb-3">
+                      <p className="text-sm font-semibold text-[#6b7bb5] mb-3">
                         Jadwal Mingguan
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {olahragaPlan.map((item) => (
                           <div
                             key={item.day}
-                            className="flex items-start gap-3"
+                            className="grid grid-cols-[110px_1fr] items-start gap-3"
                           >
-                            <span className="text-xs font-semibold text-gray-500 w-16">
+                            <span className="text-sm font-semibold text-[#6b7bb5]">
                               {item.day}
                             </span>
-                            <span className="text-sm text-gray-700 leading-6">
+                            <span className="text-[13px] text-gray-700 leading-6">
                               {item.activity}
                             </span>
                           </div>
@@ -552,19 +552,31 @@ export default function RecommendationPage() {
               </div>
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
                 {parsed.air.length ? (
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-                    <img
-                      src="/gelas.png"
-                      alt="Ilustrasi gelas air"
-                      className="w-24 md:w-28 h-auto drop-shadow-md"
-                    />
-                    <div className="flex items-center gap-3">
-                      <span className="text-5xl md:text-6xl font-extrabold text-[#2d3a8c] leading-none">
-                        {airNumber}
-                      </span>
-                      <span className="text-base text-gray-600">
-                        Gelas per hari
-                      </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+                      <img
+                        src="/gelas.png"
+                        alt="Ilustrasi gelas air"
+                        className="w-24 md:w-28 h-auto drop-shadow-md"
+                      />
+                      <div className="flex items-center gap-3">
+                        <span className="text-5xl md:text-6xl font-extrabold text-[#2d3a8c] leading-none">
+                          {airNumber}
+                        </span>
+                        <span className="text-base text-gray-600">
+                          Gelas per hari
+                        </span>
+                      </div>
+                    </div>
+                    <div className="md:border-l md:border-blue-50 md:pl-6">
+                      <p className="text-sm font-semibold text-[#6b7bb5] mb-2">
+                        Komitmen 30 Hari
+                      </p>
+                      <p className="text-[13px] text-gray-600 leading-6">
+                        Ikuti rekomendasi di atas selama sebulan, lalu update
+                        progres badan kamu untuk melihat perubahan secara
+                        berkala.
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -575,8 +587,8 @@ export default function RecommendationPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
-              <p className="text-sm text-gray-600">
+            <div className="bg-[#fff7e8] rounded-2xl p-5 shadow-sm border border-[#fde1b2]">
+              <p className="text-sm text-[#7a5a1f]">
                 Catatan: Rekomendasi ini bersifat umum dan tidak menggantikan
                 konsultasi dengan profesional secara langsung.
               </p>

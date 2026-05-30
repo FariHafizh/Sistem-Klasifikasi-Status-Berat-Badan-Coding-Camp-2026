@@ -46,7 +46,7 @@ export default function HomePage() {
             custom={1}
             className="mt-4 text-gray-600 text-base leading-relaxed max-w-md"
           >
-            ObesityPredict membantumu memantau risiko obesitas dengan analisis
+            WeightAct membantumu memantau risiko obesitas dengan analisis
             data kesehatan berbasis AI. Mudah, cepat, dan gratis.
           </motion.p>
 

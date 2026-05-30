@@ -8,11 +8,11 @@ export default function Navbar() {
         <Link to="/" className="flex items-center gap-2">
           <img
             src="/favicon.webp"
-            alt="ObesityPredict logo"
+            alt="WeightAct logo"
             className="w-8 h-8 object-contain"
           />
           <span className="font-bold text-primary text-base tracking-tight">
-            ObesityPredict
+            WeightAct
           </span>
         </Link>
 

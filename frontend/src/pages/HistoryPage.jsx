@@ -50,13 +50,13 @@ const STATUS_BADGE = {
   Normal: 'bg-green-100 text-green-700',
   Underweight: 'bg-blue-100 text-blue-700',
   Overweight: 'bg-yellow-100 text-yellow-700',
-  Obesity: 'bg-red-100 text-red-600',
+  Obesity: 'bg-orange-100 text-orange-700',
 };
 const STATUS_LABEL = {
   Normal: 'Normal',
   Underweight: 'Underweight',
   Overweight: 'Overweight',
-  Obesity: 'Obesity',
+  Obesity: 'Obese',
 };
 
 // Format tanggal dari backend "YYYY-MM-DD HH:mm:ss"
@@ -250,7 +250,7 @@ export default function HistoryPage() {
                     <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3">
                       Skor BMI
                     </th>
-                    <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3">
+                    <th className="text-center text-xs font-semibold text-gray-400 uppercase tracking-wider pb-3">
                       Status
                     </th>
                   </tr>
@@ -279,9 +279,9 @@ export default function HistoryPage() {
                             {Number(h.bmi).toFixed(3)}
                           </span>
                         </td>
-                        <td className="py-4">
+                        <td className="py-4 text-center">
                           <span
-                            className={`text-xs font-semibold px-3 py-1 rounded-full ${badge}`}
+                            className={`inline-flex items-center justify-center text-xs font-semibold px-3 py-1 rounded-full ${badge}`}
                           >
                             {label}
                           </span>

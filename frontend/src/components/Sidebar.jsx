@@ -28,7 +28,7 @@ export default function Sidebar() {
             className="w-7 h-7 object-contain"
           />
           <span className="font-bold text-primary text-sm tracking-tight">
-            ObesityPredict
+            WeightAct
           </span>
         </Link>
       </div>

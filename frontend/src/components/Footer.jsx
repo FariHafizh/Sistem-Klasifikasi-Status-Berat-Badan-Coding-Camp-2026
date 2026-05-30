@@ -11,12 +11,10 @@ export default function Footer() {
             <div className="flex items-center gap-2 mb-3">
               <img
                 src="/favicon.webp"
-                alt="ObesityPredict logo"
+                alt="WeightAct logo"
                 className="w-8 h-8 object-contain"
               />
-              <span className="font-bold text-primary text-base">
-                ObesityPredict
-              </span>
+              <span className="font-bold text-primary text-base">WeightAct</span>
             </div>
             <p className="text-sm text-gray-500 leading-relaxed">
               Pantau kesehatan tubuhmu dengan kecerdasan buatan. Gratis dan
@@ -44,7 +42,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-blue-50 text-xs text-center text-gray-400">
-          © 2025 ObesityPredict. All rights reserved.
+          © 2025 WeightAct. All rights reserved.
         </div>
       </div>
     </footer>
