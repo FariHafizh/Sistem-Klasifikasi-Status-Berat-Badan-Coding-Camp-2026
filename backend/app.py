@@ -5,10 +5,11 @@ from pathlib import Path
 try:
     from dotenv import load_dotenv  # type: ignore
 
-    # Load backend/.env if present (dev convenience)
-    load_dotenv()
+    # Muat backend/.env jika ada (untuk dev lokal)
+    env_path = Path(__file__).resolve().parent / ".env"
+    load_dotenv(dotenv_path=env_path, override=False)
 except Exception:
-    # python-dotenv is optional; env vars can still be provided by the shell.
+    # python-dotenv opsional; env var tetap bisa diisi dari shell.
     pass
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -40,7 +41,7 @@ CORS(
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
-# Konfigurasi API Key untuk GenAI
+# Kunci API untuk layanan rekomendasi (GenAI)
 GENAI_API_KEY = os.getenv("GENAI_API_KEY")
 client = genai.Client(api_key=GENAI_API_KEY) if GENAI_API_KEY else None
 
@@ -177,11 +178,11 @@ def predict():
         if ch2o not in (1.0, 2.0, 3.0):
             return invalid_input()
         
-        # Konversi BMI  (Tinggi cm  ke m)
+        # Konversi BMI (tinggi cm ke m)
         height_m = height / 100
         bmi = weight / (height_m ** 2)
         
-        # Konversi Water  Intake  per Kg
+        # Konversi asupan air per kg
         water_intake_per_kg = ch2o / weight
         
     except (ValueError, TypeError, ZeroDivisionError):
@@ -388,18 +389,20 @@ def get_recommendation():
     Formatkan output secara konsisten dengan 3 bagian berikut saja:
 
     Pola Makan Harian 
-    (Kalau dia underweight, tambahkan makan sore, dan cemilan di antara sarapan dan makan siang, kalau normal, overweight, dan obese biarkan default)
+    (Jika status underweight, WAJIB ada baris "Makan Sore: <1 kalimat>". Jika normal/overweight/obese, jangan tulis baris Makan Sore.)
     Metode: Metode hanya ada 2 yaitu Surplus Kalori dan Defisit Kalori. Kalau underweight metodenya "Fokus surplus kalori", kalau normal "Diet seimbang dengan kalori sesuai kebutuhan", kalau overweight "Fokus defisit kalori", kalau obese "Fokus defisit kalori")
     Sarapan: <1 kalimat>
     Makan Siang: <1 kalimat>
     Makan Malam: <1 kalimat>
-    (Untuk makanan jangan boros kata, cukup sebutkan makanannya. Opsional dengan porsi. Jangan tambah kata kata lain selain itu)
+    (Untuk makanan jangan boros kata, cukup sebutkan makanannya dan porsinya, sesuaikan dengan statusnya. Jangan tambah kata kata lain selain itu)
     Tips: <1/2 kalimat> 
     
 
     Olahraga per Minggu
     (Untuk jadwal mingguan, gunakan hanya sedikit kata saja, jenis dan durasi/repetisi, sesuaikan dengan metodenya)
     (kalau hari istirahat cukup tulis "Istirahat")
+    (Jangan gunakan jalan cepat atau santai, ganti dengan joging)
+    (Untuk latihan beban jangan bilang pakai berat badan sendiri atau barang aneh lainnya, sebut saja dengan beban berapa kilogram)
     Metode: Metode hanya ada 2 yaitu Strength Training dan Cardio. Kalau underweight metodenya "Fokus latihan beban", kalau normal "Kombinasi latihan beban dan kardio", kalau overweight "Fokus kardio", kalau obese "Fokus kardio")
     Jadwal Mingguan:
     Senin: <1 kalimat>
@@ -409,7 +412,8 @@ def get_recommendation():
     Jumat: <1 kalimat>
     Sabtu: <1 kalimat>
     Minggu: <1 kalimat>
-    (Oalahraga atau latihannya tolong jangan gunakan istilah seperti olahraga kompetisi/olimpiade atau menggunakan olahraga yang susah dilakukan untuk orang awam, gunakan olahraga yang umumnya dilakukan oleh orang awam)
+    (Olahraga atau latihannya antara hari satu dengan lainnya boleh variasi yang penting sesuaikan dengan statusnya)
+    (Olahraga atau latihannya tolong jangan gunakan istilah seperti olahraga kompetisi/olimpiade atau menggunakan olahraga yang susah dilakukan untuk orang awam, gunakan olahraga yang umumnya dilakukan oleh orang awam)
     Tips: <1/2 kalimat>
 
     Asupan Air Harian

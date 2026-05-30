@@ -11,7 +11,7 @@ class InferenceConfig:
     scaler_file: str = "scaler_obesitas.pkl"
     dnn_model_file: str = "model_dnn_obesitas.keras"
     ml_model_file: str = "model_obesitas.pkl"
-    model_type: str = "dnn"  # 'dnn' | 'ml'
+    model_type: str = "dnn"  # jenis model: 'dnn' | 'ml'
 
 
 class ObesityInference:
@@ -49,7 +49,7 @@ class ObesityInference:
                 "Dependency 'joblib' belum terpasang. Install dependencies inference terlebih dulu."
             ) from e
 
-        # Keep runtime logs clean when artefacts were pickled with a different sklearn version.
+        # Rapikan log saat artefak dibuat dengan versi sklearn yang berbeda.
         try:
             import warnings
             from sklearn.exceptions import InconsistentVersionWarning  # type: ignore
@@ -72,14 +72,14 @@ class ObesityInference:
 
         if desired == "dnn":
             try:
-                # Lazy import TF only when actually needed
+                # Import TF hanya saat dibutuhkan
                 import tensorflow as tf  # type: ignore
 
                 self._model = tf.keras.models.load_model(self._abs(self._config.dnn_model_file))
                 self._active_model_type = "dnn"
             except Exception:
-                # Common case: TensorFlow is unavailable (e.g. unsupported Python version).
-                # Fallback to ML artefact so the API remains usable.
+                # Kasus umum: TensorFlow tidak tersedia (mis. versi Python tidak cocok).
+                # Pakai model ML agar API tetap bisa dipakai.
                 self._ml_model = joblib.load(self._abs(self._config.ml_model_file))
                 self._active_model_type = "ml"
         else:
@@ -152,10 +152,10 @@ _default_inference: Optional[ObesityInference] = None
 
 
 def get_inference() -> ObesityInference:
-    """Singleton inference instance.
+    """Instance inference tunggal.
 
-    MODEL_DIR defaults to '<repo>/Artficial Intelligence' to reuse existing artefacts.
-    Override with env var MODEL_DIR if you copy artefacts elsewhere.
+    MODEL_DIR default ke '<repo>/Artficial Intelligence' untuk memakai artefak yang ada.
+    Gunakan env var MODEL_DIR jika artefak dipindah ke lokasi lain.
     """
 
     global _default_inference
@@ -173,7 +173,7 @@ def get_inference() -> ObesityInference:
 
     model_type = os.environ.get("MODEL_TYPE", "").strip().lower()
     if not model_type:
-        # Default to metadata's preference when not explicitly set.
+        # Ikuti preferensi metadata jika env var tidak diset.
         try:
             with open(os.path.join(model_dir, "dnn_metadata.json"), "r", encoding="utf-8") as f:
                 meta = json.load(f)

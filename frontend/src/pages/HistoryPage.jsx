@@ -48,7 +48,7 @@ const MOCK_HISTORY = [
 
 const STATUS_BADGE = {
   Normal: 'bg-green-100 text-green-700',
-  Underweight: 'bg-blue-100 text-blue-700',
+  Underweight: 'bg-yellow-100 text-yellow-700',
   Overweight: 'bg-yellow-100 text-yellow-700',
   Obesity: 'bg-orange-100 text-orange-700',
 };

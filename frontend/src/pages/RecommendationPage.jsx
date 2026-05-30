@@ -300,11 +300,16 @@ export default function RecommendationPage() {
           navigate('/login');
           return;
         }
-        if (err.response?.status === 404)
+        if (err.response?.status === 404) {
           setError('Lakukan prediksi kesehatan terlebih dahulu.');
-        else if (err.response?.status === 503)
-          setError('Fitur rekomendasi belum dikonfigurasi.');
-        else setError('Gagal memuat rekomendasi.');
+        } else if (err.response?.status === 503) {
+          setError(
+            err.response?.data?.message ||
+              'Fitur rekomendasi belum dikonfigurasi.',
+          );
+        } else {
+          setError(err.response?.data?.message || 'Gagal memuat rekomendasi.');
+        }
       } finally {
         setLoading(false);
         setGenerating(false);
@@ -363,7 +368,13 @@ export default function RecommendationPage() {
       ) : error ? (
         <div className="bg-white rounded-2xl p-10 text-center shadow-sm border border-blue-100">
           <p className="text-gray-500 mb-4">{error}</p>
-          <Button onClick={() => navigate('/input')}>Mulai Prediksi</Button>
+          {error.toLowerCase().includes('prediksi') ? (
+            <Button onClick={() => navigate('/input')}>Mulai Prediksi</Button>
+          ) : (
+            <Button onClick={() => fetchRekom({ forceGenerate: true })}>
+              Coba Lagi
+            </Button>
+          )}
         </div>
       ) : !rekomendasi ? (
         /* Belum ada rekomendasi, tampilin tombol generate */

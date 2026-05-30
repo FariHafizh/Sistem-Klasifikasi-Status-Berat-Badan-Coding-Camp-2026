@@ -14,15 +14,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auth
+// Autentikasi
 
 export const registerUser = ({ name, email, password }) =>
   api.post('/register', { username: name, email, password });
-// Response: { message }
+// Respon: { message }
 
 export const loginUser = ({ email, password }) =>
   api.post('/login', { email, password });
-// Response: { message, username, access_token }
+// Respon: { message, username, access_token }
 
 /**
  * ─────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ export const loginUser = ({ email, password }) =>
  * monitor_calories:'yes'/'no'           scc_num:            1/0
  * high_calorie:   'yes'/'no'            favc_num:           1/0
  * water_intake    (langsung)             ch2o:               float
- * height          (dalam cm)         height: cm (backend konversi sendiri ke m)
+ * height          (dalam cm)         height: cm (backend konversi ke m)
  */
 const SNACKING_MAP = { never: 0, sometimes: 1, frequent: 2, always: 3 };
 const EXERCISE_MAP = { 0: 0, '1-2': 1, '3-4': 2, '4+': 3 };
@@ -54,18 +54,18 @@ export const predictObesity = (form, { replaceLatest = false } = {}) => {
   };
 
   return api.post('/predict', payload);
-  // Response: { message, hasil_prediksi: { status_kesehatan, bmi, model_used, probabilities } }
+  // Respon: { message, hasil_prediksi: { status_kesehatan, bmi, model_used, probabilities } }
 };
 
 // ── History ────────────────────────────────────────────────────
 
 export const getHistory = () => api.get('/history');
-// Response: { message, data: [...] }
+// Respon: { message, data: [...] }
 
 // ── Dashboard ──────────────────────────────────────────────────
 
 export const getDashboard = () => api.get('/dashboard');
-// Response: { message, has_data, data_terbaru: { weight, bmi, status_kesehatan, tanggal_tes_terakhir } }
+// Respon: { message, has_data, data_terbaru: { weight, bmi, status_kesehatan, tanggal_tes_terakhir } }
 
 // ── Recommendation ─────────────────────────────────────────────
 
@@ -76,6 +76,6 @@ export const getRecommendation = (cacheOnly = false, forceGenerate = false) =>
       force_generate: forceGenerate ? '1' : '0',
     },
   });
-// Response: { message, rekomendasi, has_data, cached }
+// Respon: { message, rekomendasi, has_data, cached }
 
 export default api;
