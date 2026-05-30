@@ -154,15 +154,44 @@ def predict():
     family_history_num = data.get('family_history_num')
     caec_num = data.get('caec_num')
     replace_latest = bool(data.get('replace_latest'))
+    use_latest_profile = bool(data.get('use_latest_profile'))
+
+    def invalid_input():
+        return jsonify({'message': 'input yang anda masukkan tidak valid'}), 400
+
+    if use_latest_profile and (age is None or gender_num is None):
+        latest_prediction = (
+            PredictionHistory.query.filter_by(user_id=current_user_id)
+            .order_by(PredictionHistory.created_at.desc())
+            .first()
+        )
+        if not latest_prediction:
+            return jsonify({
+                'message': 'Data profil belum tersedia, lakukan prediksi pertama.'
+            }), 400
+        if age is None:
+            age = latest_prediction.age
+        if gender_num is None:
+            gender_num = latest_prediction.gender_num
 
     # validasi data input
     if None in (age, gender_num, height, weight, ch2o, favc_num, faf, scc_num, family_history_num, caec_num):
         return jsonify({'message': 'Semua field wajib diisi'}), 400    
 
     try:
+        age = int(age)
+        gender_num = int(gender_num)
         height = float(height)
         weight = float(weight)
         ch2o = float(ch2o)
+        if age < 12 or age > 100:
+            return invalid_input()
+        if height < 50 or height > 250:
+            return invalid_input()
+        if weight < 10 or weight > 350:
+            return invalid_input()
+        if ch2o not in (1.0, 2.0, 3.0):
+            return invalid_input()
         
         # Konversi BMI  (Tinggi cm  ke m)
         height_m = height / 100
@@ -172,7 +201,7 @@ def predict():
         water_intake_per_kg = ch2o / weight
         
     except (ValueError, TypeError, ZeroDivisionError):
-        return jsonify({'message': 'Terjadi kesalahan format angka atau pembagian dengan nol'}), 400
+        return invalid_input()
 
     # Payload fitur sesuai metadata model (Artficial Intelligence/dnn_metadata.json)
     features_for_model = {
@@ -376,17 +405,18 @@ def get_recommendation():
 
     Pola Makan Harian 
     (Kalau dia underweight, tambahkan makan sore, dan cemilan di antara sarapan dan makan siang, kalau normal, overweight, dan obese biarkan default)
-    Metode: <1 kalimat>
+    Metode: Metode hanya ada 2 yaitu Surplus Kalori dan Defisit Kalori. Kalau underweight metodenya "Fokus surplus kalori", kalau normal "Diet seimbang dengan kalori sesuai kebutuhan", kalau overweight "Fokus defisit kalori", kalau obese "Fokus defisit kalori")
     Sarapan: <1 kalimat>
     Makan Siang: <1 kalimat>
     Makan Malam: <1 kalimat>
+    (Untuk makanan jangan boros kata, cukup sebutkan makanannya. Opsional dengan porsi. Jangan tambah kata kata lain selain itu)
     Tips: <1/2 kalimat> 
     
 
     Olahraga per Minggu
-    (Untuk jadwal mingguan, gunakan hanya sedikit kata saja, jenis dan durasi/repetisi)
+    (Untuk jadwal mingguan, gunakan hanya sedikit kata saja, jenis dan durasi/repetisi, sesuaikan dengan metodenya)
     (kalau hari istirahat cukup tulis "Istirahat")
-    Metode: <1 kalimat>
+    Metode: Metode hanya ada 2 yaitu Strength Training dan Cardio. Kalau underweight metodenya "Fokus latihan beban", kalau normal "Kombinasi latihan beban dan kardio", kalau overweight "Fokus kardio", kalau obese "Fokus kardio")
     Jadwal Mingguan:
     Senin: <1 kalimat>
     Selasa: <1 kalimat>
@@ -395,6 +425,7 @@ def get_recommendation():
     Jumat: <1 kalimat>
     Sabtu: <1 kalimat>
     Minggu: <1 kalimat>
+    (Oalahraga atau latihannya tolong jangan gunakan istilah seperti olahraga kompetisi/olimpiade atau menggunakan olahraga yang susah dilakukan untuk orang awam, gunakan olahraga yang umumnya dilakukan oleh orang awam)
     Tips: <1/2 kalimat>
 
     Asupan Air Harian

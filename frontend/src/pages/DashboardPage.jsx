@@ -1,14 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  BarChart2,
-  Heart,
-  Weight,
-  Lock,
-  TrendingDown,
-  TrendingUp,
-  Minus,
-} from 'lucide-react';
+import { BarChart2, Heart, Weight, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Button, ConfirmModal } from '../components/ui';
 import { getDashboard } from '../services/api';
@@ -36,25 +28,37 @@ const MOCK_DASHBOARD = {
 // 4 kategori hasil prediksi
 const STATUS_STYLE = {
   Insufficient_Weight: {
-    badge: 'bg-blue-100 text-blue-700',
+    badge: 'bg-blue-100 text-blue-700 border-blue-200',
     label: 'Underweight',
   },
-  Normal_Weight: { badge: 'bg-green-100 text-green-700', label: 'Normal' },
+  Normal_Weight: {
+    badge: 'bg-green-100 text-green-700 border-green-200',
+    label: 'Normal',
+  },
   Overweight_Level_I: {
-    badge: 'bg-yellow-100 text-yellow-700',
+    badge: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     label: 'Overweight',
   },
   Overweight_Level_II: {
-    badge: 'bg-yellow-100 text-yellow-700',
+    badge: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     label: 'Overweight',
   },
-  Obesity_Type_I: { badge: 'bg-orange-100 text-orange-700', label: 'Obesitas' },
-  Obesity_Type_II: { badge: 'bg-orange-100 text-orange-700', label: 'Obesitas' },
-  Obesity_Type_III: { badge: 'bg-orange-100 text-orange-700', label: 'Obesitas' },
+  Obesity_Type_I: {
+    badge: 'bg-orange-100 text-orange-700 border-orange-200',
+    label: 'Obesitas',
+  },
+  Obesity_Type_II: {
+    badge: 'bg-orange-100 text-orange-700 border-orange-200',
+    label: 'Obesitas',
+  },
+  Obesity_Type_III: {
+    badge: 'bg-orange-100 text-orange-700 border-orange-200',
+    label: 'Obesitas',
+  },
 };
 const getStatus = (key) =>
   STATUS_STYLE[key] ?? {
-    badge: 'bg-gray-100 text-gray-600',
+    badge: 'bg-gray-100 text-gray-600 border-gray-200',
     label: key ?? '-',
   };
 
@@ -194,24 +198,11 @@ export default function DashboardPage() {
                 <Heart size={18} />
                 <span className="text-sm">Status Kesehatan</span>
               </div>
-              <p className="text-3xl font-bold text-gray-800 mb-2">
-                {statusStyle.label}
-              </p>
-
               <span
-                className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusStyle.badge}`}
+                className={`inline-flex items-center justify-center text-sm font-semibold px-4 py-1.5 rounded-full border ${statusStyle.badge}`}
               >
                 {statusStyle.label}
               </span>
-
-              <p className="text-sm text-gray-500 mt-3">
-                Confidence Score:{' '}
-                <span className="font-semibold text-gray-700">
-                  {data?.data_terbaru?.confidence_score
-                    ? `${(data.data_terbaru.confidence_score * 100).toFixed(1)}%`
-                    : '-'}
-                </span>
-              </p>
             </div>
 
             {/* Berat Card — dengan indikator naik/turun */}
@@ -281,7 +272,6 @@ export default function DashboardPage() {
                 bg-primary text-white hover:bg-[#16305e] shadow-lg shadow-blue-200
               `}
             >
-              <Lock size={20} />
               Update Progress Bulanan
             </button>
           </div>

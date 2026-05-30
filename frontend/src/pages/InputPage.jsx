@@ -32,6 +32,12 @@ const EXERCISE_OPTIONS = [
   { value: '4+', label: 'Lebih dari 4 Hari' },
 ];
 
+const WATER_OPTIONS = [
+  { value: '1', label: 'Kurang dari 1 liter' },
+  { value: '2', label: '1-2 liter' },
+  { value: '3', label: 'Lebih dari 2 liter' },
+];
+
 const YES_NO = [
   { value: 'yes', label: 'Ya' },
   { value: 'no', label: 'Tidak' },
@@ -102,45 +108,43 @@ export default function InputPage() {
     const errs = {};
 
     // Usia
-    if (!form.age) {
-      errs.age = 'Usia wajib diisi';
-    } else if (isNaN(form.age) || !Number.isInteger(Number(form.age))) {
-      errs.age = 'Usia harus berupa bilangan bulat';
-    } else if (Number(form.age) < 1 || Number(form.age) > 120) {
-      errs.age = 'Usia harus antara 1–120 tahun';
+    if (!isProgress) {
+      if (!form.age) {
+        errs.age = 'Usia wajib diisi';
+      } else if (isNaN(form.age) || !Number.isInteger(Number(form.age))) {
+        errs.age = 'input yang anda masukkan tidak valid';
+      } else if (Number(form.age) < 12 || Number(form.age) > 100) {
+        errs.age = 'input yang anda masukkan tidak valid';
+      }
     }
 
     // Jenis Kelamin
-    if (!form.gender) errs.gender = 'Jenis kelamin wajib dipilih';
+    if (!isProgress && !form.gender)
+      errs.gender = 'Jenis kelamin wajib dipilih';
 
     // Tinggi Badan
     if (!form.height) {
       errs.height = 'Tinggi badan wajib diisi';
     } else if (isNaN(form.height)) {
-      errs.height = 'Tinggi badan harus berupa angka';
+      errs.height = 'input yang anda masukkan tidak valid';
     } else if (Number(form.height) < 50 || Number(form.height) > 250) {
-      errs.height = 'Tinggi badan harus antara 50–250 cm';
+      errs.height = 'input yang anda masukkan tidak valid';
     }
 
     // Berat Badan
     if (!form.weight) {
       errs.weight = 'Berat badan wajib diisi';
     } else if (isNaN(form.weight)) {
-      errs.weight = 'Berat badan harus berupa angka';
-    } else if (Number(form.weight) < 10 || Number(form.weight) > 300) {
-      errs.weight = 'Berat badan harus antara 10–300 kg';
+      errs.weight = 'input yang anda masukkan tidak valid';
+    } else if (Number(form.weight) < 10 || Number(form.weight) > 350) {
+      errs.weight = 'input yang anda masukkan tidak valid';
     }
 
     // Asupan Air
     if (!form.water_intake) {
       errs.water_intake = 'Asupan air wajib diisi';
-    } else if (isNaN(form.water_intake)) {
-      errs.water_intake = 'Asupan air harus berupa angka';
-    } else if (
-      Number(form.water_intake) < 0 ||
-      Number(form.water_intake) > 20
-    ) {
-      errs.water_intake = 'Asupan air harus antara 0–20 liter';
+    } else if (!['1', '2', '3'].includes(String(form.water_intake))) {
+      errs.water_intake = 'input yang anda masukkan tidak valid';
     }
 
     // Dropdown & Radio
@@ -176,7 +180,10 @@ export default function InputPage() {
     // PRODUCTION MODE
     try {
       const replaceLatest = location.state?.replaceLatest === true;
-      await predictObesity(form, { replaceLatest });
+      await predictObesity(form, {
+        replaceLatest,
+        useLatestProfile: isProgress,
+      });
       navigate('/dashboard');
     } catch (err) {
       if (err.response?.status === 401) {
@@ -220,28 +227,32 @@ export default function InputPage() {
           {/* Form Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Usia */}
-              <InputField
-                label="Usia"
-                id="age"
-                type="number"
-                placeholder="Contoh: 25"
-                value={form.age}
-                onChange={set('age')}
-                required
-                error={errors.age}
-              />
+              {!isProgress && (
+                <>
+                  {/* Usia */}
+                  <InputField
+                    label="Usia"
+                    id="age"
+                    type="number"
+                    placeholder="Contoh: 25"
+                    value={form.age}
+                    onChange={set('age')}
+                    required
+                    error={errors.age}
+                  />
 
-              {/* Jenis Kelamin */}
-              <SelectField
-                label="Jenis Kelamin"
-                id="gender"
-                options={GENDER_OPTIONS}
-                value={form.gender}
-                onChange={set('gender')}
-                required
-                error={errors.gender}
-              />
+                  {/* Jenis Kelamin */}
+                  <SelectField
+                    label="Jenis Kelamin"
+                    id="gender"
+                    options={GENDER_OPTIONS}
+                    value={form.gender}
+                    onChange={set('gender')}
+                    required
+                    error={errors.gender}
+                  />
+                </>
+              )}
 
               {/* Tinggi Badan */}
               <InputField
@@ -268,11 +279,10 @@ export default function InputPage() {
               />
 
               {/* Asupan Air */}
-              <InputField
+              <SelectField
                 label="Asupan Air Putih (Liter/Hari)"
                 id="water_intake"
-                type="number"
-                placeholder="Contoh: 2"
+                options={WATER_OPTIONS}
                 value={form.water_intake}
                 onChange={set('water_intake')}
                 required
