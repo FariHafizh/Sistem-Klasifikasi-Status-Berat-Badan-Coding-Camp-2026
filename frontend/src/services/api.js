@@ -38,11 +38,10 @@ export const loginUser = ({ email, password }) =>
 const SNACKING_MAP = { never: 0, sometimes: 1, frequent: 2, always: 3 };
 const EXERCISE_MAP = { 0: 0, '1-2': 1, '3-4': 2, '4+': 3 };
 
-export const predictObesity = (
-  form,
-  { replaceLatest = false, useLatestProfile = false } = {},
-) => {
+export const predictObesity = (form, { replaceLatest = false } = {}) => {
   const payload = {
+    age: parseInt(form.age),
+    gender_num: form.gender === 'male' ? 1 : 0,
     height: parseFloat(form.height), // kirim dalam cm
     weight: parseFloat(form.weight),
     ch2o: parseFloat(form.water_intake),
@@ -52,16 +51,7 @@ export const predictObesity = (
     family_history_num: form.family_history === 'yes' ? 1 : 0,
     caec_num: SNACKING_MAP[form.snacking] ?? 0,
     replace_latest: replaceLatest,
-    use_latest_profile: useLatestProfile,
   };
-
-  if (form.age !== '' && form.age !== null && form.age !== undefined) {
-    payload.age = parseInt(form.age);
-  }
-
-  if (form.gender) {
-    payload.gender_num = form.gender === 'male' ? 1 : 0;
-  }
 
   return api.post('/predict', payload);
   // Response: { message, hasil_prediksi: { status_kesehatan, bmi, model_used, probabilities } }

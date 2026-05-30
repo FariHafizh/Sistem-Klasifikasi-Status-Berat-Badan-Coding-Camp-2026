@@ -154,25 +154,9 @@ def predict():
     family_history_num = data.get('family_history_num')
     caec_num = data.get('caec_num')
     replace_latest = bool(data.get('replace_latest'))
-    use_latest_profile = bool(data.get('use_latest_profile'))
 
     def invalid_input():
         return jsonify({'message': 'input yang anda masukkan tidak valid'}), 400
-
-    if use_latest_profile and (age is None or gender_num is None):
-        latest_prediction = (
-            PredictionHistory.query.filter_by(user_id=current_user_id)
-            .order_by(PredictionHistory.created_at.desc())
-            .first()
-        )
-        if not latest_prediction:
-            return jsonify({
-                'message': 'Data profil belum tersedia, lakukan prediksi pertama.'
-            }), 400
-        if age is None:
-            age = latest_prediction.age
-        if gender_num is None:
-            gender_num = latest_prediction.gender_num
 
     # validasi data input
     if None in (age, gender_num, height, weight, ch2o, favc_num, faf, scc_num, family_history_num, caec_num):

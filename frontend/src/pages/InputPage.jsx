@@ -108,19 +108,16 @@ export default function InputPage() {
     const errs = {};
 
     // Usia
-    if (!isProgress) {
-      if (!form.age) {
-        errs.age = 'Usia wajib diisi';
-      } else if (isNaN(form.age) || !Number.isInteger(Number(form.age))) {
-        errs.age = 'input yang anda masukkan tidak valid';
-      } else if (Number(form.age) < 12 || Number(form.age) > 100) {
-        errs.age = 'input yang anda masukkan tidak valid';
-      }
+    if (!form.age) {
+      errs.age = 'Usia wajib diisi';
+    } else if (isNaN(form.age) || !Number.isInteger(Number(form.age))) {
+      errs.age = 'input yang anda masukkan tidak valid';
+    } else if (Number(form.age) < 12 || Number(form.age) > 100) {
+      errs.age = 'input yang anda masukkan tidak valid';
     }
 
     // Jenis Kelamin
-    if (!isProgress && !form.gender)
-      errs.gender = 'Jenis kelamin wajib dipilih';
+    if (!form.gender) errs.gender = 'Jenis kelamin wajib dipilih';
 
     // Tinggi Badan
     if (!form.height) {
@@ -180,10 +177,7 @@ export default function InputPage() {
     // PRODUCTION MODE
     try {
       const replaceLatest = location.state?.replaceLatest === true;
-      await predictObesity(form, {
-        replaceLatest,
-        useLatestProfile: isProgress,
-      });
+      await predictObesity(form, { replaceLatest });
       navigate('/dashboard');
     } catch (err) {
       if (err.response?.status === 401) {
@@ -227,32 +221,28 @@ export default function InputPage() {
           {/* Form Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-blue-100 p-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {!isProgress && (
-                <>
-                  {/* Usia */}
-                  <InputField
-                    label="Usia"
-                    id="age"
-                    type="number"
-                    placeholder="Contoh: 25"
-                    value={form.age}
-                    onChange={set('age')}
-                    required
-                    error={errors.age}
-                  />
+              {/* Usia */}
+              <InputField
+                label="Usia"
+                id="age"
+                type="number"
+                placeholder="Contoh: 25"
+                value={form.age}
+                onChange={set('age')}
+                required
+                error={errors.age}
+              />
 
-                  {/* Jenis Kelamin */}
-                  <SelectField
-                    label="Jenis Kelamin"
-                    id="gender"
-                    options={GENDER_OPTIONS}
-                    value={form.gender}
-                    onChange={set('gender')}
-                    required
-                    error={errors.gender}
-                  />
-                </>
-              )}
+              {/* Jenis Kelamin */}
+              <SelectField
+                label="Jenis Kelamin"
+                id="gender"
+                options={GENDER_OPTIONS}
+                value={form.gender}
+                onChange={set('gender')}
+                required
+                error={errors.gender}
+              />
 
               {/* Tinggi Badan */}
               <InputField
