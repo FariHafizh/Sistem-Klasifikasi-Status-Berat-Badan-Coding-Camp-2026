@@ -34,9 +34,8 @@ export default function HomePage() {
             custom={0}
             className="text-4xl md:text-5xl font-extrabold text-primary leading-tight"
           >
-            Pantau Kesehatan <br />
-            <span className="text-primary-light">Tubuhmu</span> dengan <br />
-            Kecerdasan AI.
+            Pantau Kesehatan Tubuhmu dengan <br />
+            Kecerdasan Buatan
           </motion.h1>
 
           <motion.p
