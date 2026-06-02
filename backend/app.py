@@ -252,7 +252,7 @@ def predict():
     db.session.add(new_history)
     db.session.commit()
 
-    # Kembalikan respon ke Frontend
+    # Kembalikan jawaban ke Frontend
     return jsonify({
         'message': 'Prediksi berhasil dilakukan dan disimpan!',
         'hasil_prediksi': {
