@@ -62,8 +62,10 @@ flask db migrate -m "update"
 flask db upgrade
 ```
 
-## Deploy (Vercel + Neon)
-- Frontend (Vercel): set VITE_API_URL 
+## Deploy 
+- Frontend (Vercel): set VITE_API_URL
+- Backend (Railway): set di .env di folder backend
 
 ## Catatan
-- Model default membaca artefak dari folder Artficial Intelligence.
+- Model dibaca dari folder models (isinya sama dengan yang ada di Artificial Intellegence)
+- Kalo lokal tidak perlu set api deploymentnya
