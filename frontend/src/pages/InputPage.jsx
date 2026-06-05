@@ -203,7 +203,7 @@ export default function InputPage() {
             <h1 className="text-3xl font-extrabold text-primary">
               {isProgress
                 ? 'Update Progress Kesehatan'
-                : 'Prediksi Tingkat Obesitas'}
+                : 'Prediksi Status Berat Badan'}
             </h1>
             <p className="text-gray-500 text-sm mt-2">
               {isProgress ? (
